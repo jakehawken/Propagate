@@ -66,7 +66,7 @@ public class Promise<T, E: Error> {
     
     - Parameter result: A result of type `Result<T,E>`, where `T` and `E` correspond to the value and error types of the promise.
     */
-    internal func complete(withResult result: Result<T, E>) {
+    public func complete(withResult result: Result<T, E>) {
         future.complete(withResult: result)
     }
 }
