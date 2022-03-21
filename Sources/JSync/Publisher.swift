@@ -70,6 +70,15 @@ public extension Publisher {
         publishNewState(.error(error))
     }
     
+    func publishState(forResult result: Result<T,E>) {
+        switch result {
+        case .success(let value):
+            publish(value)
+        case .failure(let error):
+            publish(error)
+        }
+    }
+    
     func cancelAll() {
         lockQueue.async {
             self.handleCancellation()
