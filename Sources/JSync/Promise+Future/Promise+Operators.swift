@@ -1,5 +1,5 @@
 //  Promise+Mapping.swift
-//  Concurrency
+//  JSync
 //  Created by Jake Hawken on 11/27/19.
 //  Copyright © 2019 Jacob Hawken. All rights reserved.
 

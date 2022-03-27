@@ -1,5 +1,5 @@
 //  StreamState.swift
-//  Propagate
+//  JSync
 //  Created by Jacob Hawken on 2/17/22.
 //  Copyright © 2022 Jake Hawken. All rights reserved.
 

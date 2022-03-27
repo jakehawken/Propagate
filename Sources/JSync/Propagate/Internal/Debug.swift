@@ -1,5 +1,5 @@
 //  Debug.swift
-//  Propagate
+//  JSync
 //  Created by Jacob Hawken on 2/19/22.
 //  Copyright © 2022 Jake Hawken. All rights reserved.
 
