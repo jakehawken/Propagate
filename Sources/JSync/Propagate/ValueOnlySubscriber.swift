@@ -33,7 +33,9 @@ public class ValueOnlySubscriber<T> {
     private var cancelCallbacks = [CancelExecutionPair]()
     private(set) public var isCancelled = false
     
-    internal init<E: Error>(subscriber: Subscriber<T,E>) {
+    fileprivate init() {}
+    
+    fileprivate init<E: Error>(subscriber: Subscriber<T,E>) {
         subscriber.onNewData { [weak self] value in
             self?.executeValueCallbacks(with: value)
         }
@@ -95,6 +97,29 @@ public extension ValueOnlySubscriber {
     /// closure for mapping from one type to the other.
     func map<NewT>(mapping: @escaping (T) -> NewT) -> ValueOnlySubscriber<NewT> {
         return ValueOnlySubscriber<NewT>(other: self, mapBlock: mapping)
+    }
+    
+    /// When T is an optional type, this function generates a new subscriber that only emits
+    /// the non-nil states.
+    ///
+    /// Example:
+    /// ```
+    /// let optStrings = stringSubscriber.valueOnly() // of type ValueOnlySubscriber<String?>
+    /// let strings = optString.compactMap()  // Will be of type ValueOnlySubscriber<String>
+    /// ```
+    func compactMap<Wrapped>() -> ValueOnlySubscriber<Wrapped> where T == Wrapped? {
+        let new = ValueOnlySubscriber<Wrapped>()
+        
+        onNext { optionalValue in
+            if let unwrapped = optionalValue {
+                new.executeValueCallbacks(with: unwrapped)
+            }
+        }
+        onCancelled {
+            new.cancel()
+        }
+        
+        return new
     }
     
 }
