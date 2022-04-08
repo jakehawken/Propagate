@@ -107,7 +107,7 @@ public extension Future {
         return promise.future
     }
     
-    /// Maps 
+    /// Allows values to conditionally trigger the error state. Used for when only a constrained range of data values are valid.
     @discardableResult func splitValueMap<NewT>(_ mapping: @escaping (T) -> Result<NewT, E>) -> Future<NewT, E> {
         mapResult { result -> Result<NewT, E> in
             switch result {
@@ -119,20 +119,51 @@ public extension Future {
         }
     }
     
-    @discardableResult func compactMap<NewT, NewE: Error>(mappingNilTo fallbackError: NewE,
-                                                          errorMap: @escaping (E) -> NewE) -> Future<NewT,NewE> where T == NewT? {
-        mapResult { result in
-            switch result {
-            case .success(let optionalValue):
-                guard let unwrapped = optionalValue else {
-                    return .failure(fallbackError)
-                }
-                return .success(unwrapped)
-            case .failure(let error):
-                let mapped = errorMap(error)
-                return .failure(mapped)
+    /// When T is an optional type, this function generates a new subscriber that only emits
+    /// the non-nil states. When the value is nil, this future will never complete, rather
+    /// than complete with an error. Failure states will pass through.
+    @discardableResult func compactMap<Unwrapped>() -> Future<Unwrapped,E> where T == Unwrapped? {
+        let promise = Promise<Unwrapped,E>()
+        
+        onSuccess { optionalValue in
+            if let unwrapped = optionalValue {
+                promise.resolve(unwrapped)
             }
         }
+        onFailure { error in
+            promise.reject(error)
+        }
+        
+        return promise.future
+    }
+    
+    /// A compact map method for when a silent failure is not an acceptable outcome.
+    /// When T is an optional type, this function generates a new subscriber that only emits
+    /// the non-nil states. When the value is nil, this future will return the `fallbackError`.
+    /// Failure states will be passed to the `errorMap` closure.
+    @discardableResult func compactMap<NewT, NewE: Error>(
+        fallbackError: NewE,
+        errorMap: @escaping (E) -> NewE
+    ) -> Future<NewT,NewE> where T == NewT? {
+        mapError(errorMap)
+        .splitValueMap { optionalValue in
+            guard let unwrapped = optionalValue else {
+                return .failure(fallbackError)
+            }
+            return .success(unwrapped)
+        }
+//        mapResult { result in
+//            switch result {
+//            case .success(let optionalValue):
+//                guard let unwrapped = optionalValue else {
+//                    return .failure(fallbackError)
+//                }
+//                return .success(unwrapped)
+//            case .failure(let error):
+//                let mapped = errorMap(error)
+//                return .failure(mapped)
+//            }
+//        }
     }
     
 }
