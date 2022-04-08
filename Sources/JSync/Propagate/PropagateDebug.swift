@@ -52,3 +52,25 @@ internal enum LogType: Equatable {
         }
     }
 }
+
+// MARK: -- conformances
+
+extension StreamState: CustomStringConvertible {
+    
+    public var description: String {
+        switch self {
+        case .data(let data): return "\(data)"
+        case .error(let error): return "\(error)"
+        case .cancelled: return "Cancelled."
+        }
+    }
+    
+}
+
+extension Subscriber: CustomStringConvertible {
+    
+    public var description: String {
+        return "Subscriber<\(T.self),\(E.self)>(\(memoryAddressStringFor(self)))"
+    }
+    
+}

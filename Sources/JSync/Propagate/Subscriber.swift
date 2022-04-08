@@ -28,16 +28,6 @@ public class Subscriber<T, E: Error> {
     
 }
 
-// MARK: debugging
-
-extension Subscriber: CustomStringConvertible {
-    
-    public var description: String {
-        return "Subscriber<\(T.self),\(E.self)>(\(memoryAddressStringFor(self)))"
-    }
-    
-}
-
 // MARK: - Convenience
 
 internal extension Subscriber {
