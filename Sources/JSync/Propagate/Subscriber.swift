@@ -26,6 +26,13 @@ public class Subscriber<T, E: Error> {
         cancel()
     }
     
+    @discardableResult func subscribe(onQueue queue: DispatchQueue, performing callback: @escaping (State) -> Void) -> Self {
+        lockQueue.async { [weak self] in
+            self?.callbacks.append((queue, callback))
+        }
+        return self
+    }
+    
 }
 
 // MARK: - Convenience
@@ -70,13 +77,6 @@ private extension Subscriber {
 public extension Subscriber {
     
     // MARK: general
-    
-    @discardableResult func subscribe(onQueue queue: DispatchQueue, performing callback: @escaping (State) -> Void) -> Self {
-        lockQueue.async { [weak self] in
-            self?.callbacks.append((queue, callback))
-        }
-        return self
-    }
     
     @discardableResult func subscribe(performing callback: @escaping (State) -> Void) -> Self {
         subscribe(onQueue: callbackQueue, performing: callback)
@@ -135,6 +135,27 @@ public extension Subscriber {
     
     @discardableResult func onCancelled(perform callback: @escaping () -> Void) -> Self {
         onCancelled(onQueue: callbackQueue, perform: callback)
+    }
+    
+}
+
+// MARK: - OnSubscribe callback subscriber
+
+/// Exists solely to give the subscriber the ability to
+/// emit the last value (if it exists) synchronously.
+/// Internal to the framkework.
+class OnSubscribeCallbackSubscriber<T,E: Error>: Subscriber<T,E> {
+    
+    var lastStateCallback: () -> State? = { nil }
+    
+    override func subscribe(onQueue queue: DispatchQueue, performing callback: @escaping (Subscriber<T, E>.State) -> Void) -> Self {
+        if let lastState = lastStateCallback() {
+            callback(lastState)
+            if case .cancelled = lastState {
+                return self
+            }
+        }
+        return super.subscribe(onQueue: queue, performing: callback)
     }
     
 }
