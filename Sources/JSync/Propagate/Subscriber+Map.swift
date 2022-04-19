@@ -71,13 +71,57 @@ public extension Subscriber {
 public extension Subscriber {
     
     /// Performs the mapping transformation to each state emitted. If the
-    /// mapping returns nil, no value is emitted on the new subscriber.
-    func compactMapState<NewT, NewE: Error>(_ mapping: @escaping (Subscriber<T,E>.State) -> Subscriber<NewT,NewE>.State?) -> Subscriber<NewT,NewE> {
+    /// mapping returns nil, no state at all is emitted on the new subscriber.
+    func compactMapStates<NewT, NewE: Error>(_ mapping: @escaping (Subscriber<T,E>.State) -> Subscriber<NewT,NewE>.State?) -> Subscriber<NewT,NewE> {
         let publisher = Publisher<NewT,NewE>()
         
         subscribe { state in
             if let mappedState = mapping(state) {
                 publisher.publishNewState(mappedState)
+            }
+        }
+        
+        return publisher.subscriber()
+    }
+    
+    /// Performs the mapping transformation to each `.data` state. If the
+    /// mapping returns nil, no value is emitted on the new subscriber.
+    /// However, `.error` and `.cancelled` states pass through normally.
+    func compactMapValues<NewT>(_ mapping: @escaping (T) -> NewT?) -> Subscriber<NewT,E> {
+        let publisher = Publisher<NewT,E>()
+        
+        subscribe { state in
+            switch state {
+            case .error(let error):
+                publisher.publish(error)
+            case .cancelled:
+                publisher.cancelAll()
+            case .data(let value):
+                if let mappedvalue = mapping(value) {
+                    publisher.publish(mappedvalue)
+                }
+            }
+        }
+        
+        return publisher.subscriber()
+    }
+    
+    /// Performs the mapping transformation to each `.error` state. If the
+    /// mapping returns nil, no error is emitted on the new subscriber.
+    /// However, `.data` and `.cancelled` states pass through normally.
+    func compactMapErrors<NewE: Error>(_ mapping: @escaping (E) -> NewE?) -> Subscriber<T,NewE> {
+        let publisher = Publisher<T,NewE>()
+        
+        subscribe { state in
+            switch state {
+            case .error(let error):
+                if let mappedError = mapping(error) {
+                    publisher.publish(mappedError)
+                }
+            case .cancelled:
+                publisher.cancelAll()
+            case .data(let value):
+                publisher.publish(value)
             }
         }
         
