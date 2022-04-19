@@ -43,7 +43,7 @@ public extension Subscriber {
 
 public extension Subscriber where T: Equatable {
     
-    /// New `.data` states are only emitted if
+    /// New `.data` states are only emitted if:
     /// A) the last state was not `.data`, or
     /// B) the last state's data did not have the same value.
     @discardableResult func distinctValues() -> Subscriber<T,E> {

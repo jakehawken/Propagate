@@ -14,3 +14,16 @@ public enum StreamState<T, E: Error> {
 extension StreamState: Equatable where T: Equatable, E: Equatable {
     
 }
+
+public extension StreamState {
+    
+    var value: T? {
+        switch self {
+        case .data(let data):
+            return data
+        default:
+            return nil
+        }
+    }
+    
+}

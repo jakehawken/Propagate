@@ -152,18 +152,6 @@ public extension Future {
             }
             return .success(unwrapped)
         }
-//        mapResult { result in
-//            switch result {
-//            case .success(let optionalValue):
-//                guard let unwrapped = optionalValue else {
-//                    return .failure(fallbackError)
-//                }
-//                return .success(unwrapped)
-//            case .failure(let error):
-//                let mapped = errorMap(error)
-//                return .failure(mapped)
-//            }
-//        }
     }
     
 }

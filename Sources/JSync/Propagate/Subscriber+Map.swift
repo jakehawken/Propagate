@@ -68,3 +68,20 @@ public extension Subscriber {
     
 }
 
+public extension Subscriber {
+    
+    /// Performs the mapping transformation to each state emitted. If the
+    /// mapping returns nil, no value is emitted on the new subscriber.
+    func compactMapState<NewT, NewE: Error>(_ mapping: @escaping (Subscriber<T,E>.State) -> Subscriber<NewT,NewE>.State?) -> Subscriber<NewT,NewE> {
+        let publisher = Publisher<NewT,NewE>()
+        
+        subscribe { state in
+            if let mappedState = mapping(state) {
+                publisher.publishNewState(mappedState)
+            }
+        }
+        
+        return publisher.subscriber()
+    }
+    
+}

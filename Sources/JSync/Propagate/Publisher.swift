@@ -34,7 +34,7 @@ public class Publisher<T, E: Error> {
         handleCancellation()
     }
     
-    func subscriber() -> Subscriber<T, E> {
+    public func subscriber() -> Subscriber<T, E> {
         /*
          Any changes made to this function's implementation will
          also need to be made to the same method on StatefulPublisher.
@@ -156,12 +156,25 @@ public class StatefulPublisher<T,E: Error>: Publisher<T, E> {
         }
     }
     
+    private var _lastValue: T?
+    public private(set) var lastValue: T? {
+        get {
+            return _lastValue
+        }
+        set {
+            if let value = newValue {
+                _lastValue = value
+            }
+        }
+    }
+    
     public override init() {
         super.init()
     }
     
     override func publishNewState(_ state: State) {
         lastState = state
+        lastValue = state.value //Computed property ignores nil, so this is ok.
         super.publishNewState(state)
     }
     
