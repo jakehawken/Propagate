@@ -60,4 +60,50 @@ userRepository.getUser(for: someUserID)
 
 ### Publisher and Subscriber
 
+Sometimes, you need to get data as it becomes ready, and a single-event paradigm like Promise/Future becomes cumbersome and unhelpful. This is where Publisher/Subscriber comes in.
+
+`Publisher<T,E>` is a source object that represents a stream of potentially many asynchronous events. It is responsible for publishing states of that data stream, and for vending subscribers. (Analagous to the Promise in the other paradigm; it is to its subscribers what a promise is to its future.)
+
+`Subscriber<T,E>` is responsible for managing the completion callbacks that are dependent on the states that the Publisher emits. Most of the interactions in your code will be with this object. (Analagous to the Future in other paradigm; it is to its publisher what a future is to its promise.)
+
+An example usage:
+
+```Swift
+func subscribeToLoginState() -> Subsciber<Login?, NSError> {
+    let publisher = Publisher<Login?, NSError>()
+
+    loginStateListener.listen { (result: Result<Login?, NSError>) in
+        switch result {
+        case .success(let login):
+            publisher.publish(login)
+        case .failure(let error):
+            publisher.publish(error)
+        }
+    }
+    
+    return publisher.subscriber()
+}
+```
+
+which allows you to write consuming code like:
+
+```Swift
+loginManager.subscribeToLoginState()
+    .onNewData { login in
+        guard let login = login else {
+           navigateToLoginScreen()
+           return
+        }
+        navigateToHomeScreen()
+    }
+    .onError {
+        handleLoginError($0)
+    }
+    .onCancelled {
+        reSubscribeToLoginState()
+    }
+```
+
+### Operators
+
 ** DOCUMENTATION COMING SOON **
