@@ -13,6 +13,9 @@ public extension Subscriber {
     /// will only trigger on new data events.
     func didUpdate(includeErrors: Bool = false) -> UpdateOnlySubscriber {
         return UpdateOnlySubscriber(subscriber: self, includeErrors: includeErrors)
+        /// Note: Does not need a `.onCancelled { _ = self }` operation appended
+        /// like other operators do because it already retains a reference to the
+        /// subscriber, by nature of its implementation.
     }
     
 }

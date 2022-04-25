@@ -5,6 +5,8 @@
 
 import Foundation
 
+/// The receiver object for states emitted by a Publisher. Manages subscriptions
+/// to stream states, and manages the dispatch queues callbacks will be called from.
 public class Subscriber<T, E: Error> {
     
     public typealias State = StreamState<T,E>
@@ -26,7 +28,13 @@ public class Subscriber<T, E: Error> {
         cancel()
     }
     
-    @discardableResult func subscribe(onQueue queue: DispatchQueue, performing callback: @escaping (State) -> Void) -> Self {
+    /// Adds a callback to the subscriber which is called for each StreamState event.
+    /// Callbacks are called on the supplied dispatch queue.
+    /// - Parameter onQueue: the dispatch queue on which the callback is to be performed.
+    /// - Parameter performing: the callback to be executed on new states
+    /// - returns: The subscriber itself, as a `@discardableResult` to allow for easy
+    /// chaining of operators.
+    @discardableResult public func subscribe(onQueue queue: DispatchQueue, performing callback: @escaping (State) -> Void) -> Self {
         lockQueue.async { [weak self] in
             self?.callbacks.append((queue, callback))
         }
@@ -53,6 +61,9 @@ internal extension Subscriber {
         receive(.error(error))
     }
     
+    /// Calling this method removes this subscriber from
+    /// its publisher. This will result in this subscriber
+    /// immediately receiving a `.cancelled` signal.
     func cancel() {
         canceller.cancel(for: self)
     }
@@ -68,6 +79,9 @@ private extension Subscriber {
         callbacks.forEach { (queue, action) in
             queue.async { action(state) }
         }
+        if case .cancelled = state {
+            callbacks.trimToRoot()
+        }
     }
     
 }
@@ -78,16 +92,32 @@ public extension Subscriber {
     
     // MARK: general
     
+    /// Adds a callback to the subscriber which is called for each StreamState event.
+    /// Callbacks are called on the subscriber's default internal dispatch queue.
+    /// - Parameter performing: the callback to be executed on new states
+    /// - returns: The subscriber itself, as a `@discardableResult` to allow for easy
+    /// chaining of operators.
     @discardableResult func subscribe(performing callback: @escaping (State) -> Void) -> Self {
         subscribe(onQueue: callbackQueue, performing: callback)
     }
     
+    /// Adds a callback to the subscriber which is called for each StreamState event.
+    /// Callbacks are called on `DispatchQueue.main`.
+    /// - Parameter performing: the callback to be executed on new states
+    /// - returns: The subscriber itself, as a `@discardableResult` to allow for easy
+    /// chaining of operators.
     @discardableResult func subscribeOnMain(performing callback: @escaping (State) -> Void) -> Self {
         subscribe(onQueue: .main, performing: callback)
     }
     
-    // MARK: new data only
+    // MARK: - new data only
     
+    /// Adds a callback to the subscriber which is called for all `.data` states.
+    /// Callbacks are called on the supplied dispatch queue.
+    /// - Parameter onQueue: the dispatch queue on which the callback is to be performed.
+    /// - Parameter perform: the callback to be executed on `.data` states
+    /// - returns: The subscriber itself, as a `@discardableResult` to allow for easy
+    /// chaining of operators.
     @discardableResult func onNewData(onQueue queue: DispatchQueue, perform callback: @escaping (T) -> Void) -> Self {
         subscribe(onQueue: queue) { (state: State) in
             switch state {
@@ -99,12 +129,23 @@ public extension Subscriber {
         }
     }
     
+    /// Adds a callback to the subscriber which is called for all `.data` states.
+    /// Callbacks are called on the subscriber's default internal dispatch queue.
+    /// - Parameter perform: the callback to be executed on `.data` states
+    /// - returns: The subscriber itself, as a `@discardableResult` to allow for easy
+    /// chaining of operators.
     @discardableResult func onNewData(perform dataAction: @escaping (T) -> Void) -> Self {
         onNewData(onQueue: callbackQueue, perform: dataAction)
     }
     
-    // MARK: error only
+    // MARK: - error only
     
+    /// Adds a callback to the subscriber which is called for all `.error` states.
+    /// Callbacks are called on the supplied dispatch queue.
+    /// - Parameter onQueue: the dispatch queue on which the callback is to be performed.
+    /// - Parameter perform: the callback to be executed on `.error` states
+    /// - returns: The subscriber itself, as a `@discardableResult` to allow for easy
+    /// chaining of operators.
     @discardableResult func onError(onQueue queue: DispatchQueue, perform callback: @escaping (E) -> Void) -> Self {
         subscribe(onQueue: queue) { (state: State) in
             switch state {
@@ -116,12 +157,23 @@ public extension Subscriber {
         }
     }
     
+    /// Adds a callback to the subscriber which is called for all `.error` states.
+    /// Callbacks are called on the subscriber's default internal dispatch queue.
+    /// - Parameter perform: the callback to be executed on `.error` states
+    /// - returns: The subscriber itself, as a `@discardableResult` to allow for easy
+    /// chaining of operators.
     @discardableResult func onError(perform callback: @escaping (E) -> Void) -> Self {
         onError(onQueue: callbackQueue, perform: callback)
     }
     
     // MARK: cancel only
     
+    /// Adds a callback to the subscriber which is called for all `.cancelled` states.
+    /// Callbacks are called on the supplied dispatch queue.
+    /// - Parameter onQueue: the dispatch queue on which the callback is to be performed.
+    /// - Parameter perform: the callback to be executed on `.cancelled` states
+    /// - returns: The subscriber itself, as a `@discardableResult` to allow for easy
+    /// chaining of operators.
     @discardableResult func onCancelled(onQueue queue: DispatchQueue, perform callback: @escaping () -> Void) -> Self {
         subscribe(onQueue: queue) { (state: State) in
             switch state {
@@ -133,8 +185,26 @@ public extension Subscriber {
         }
     }
     
+    /// Adds a callback to the subscriber which is called for all `.cancelled` states.
+    /// Callbacks are called on the subscriber's default internal dispatch queue.
+    /// - Parameter perform: the callback to be executed on `.cancelled` states
+    /// - returns: The subscriber itself, as a `@discardableResult` to allow for easy
+    /// chaining of operators.
     @discardableResult func onCancelled(perform callback: @escaping () -> Void) -> Self {
         onCancelled(onQueue: callbackQueue, perform: callback)
+    }
+    
+}
+
+public extension Subscriber {
+    
+    /// Binds this subscriber to a publisher of the same type. Each StreamState received
+    /// by this subscriber will be published by the publisher it has been bound to.
+    @discardableResult func bindTo(_ publisher: Publisher<T,E>) -> Self {
+        subscribe {
+            publisher.publishNewState($0)
+        }
+        return self
     }
     
 }

@@ -1,3 +1,3 @@
-# JSync
+# Propagate
 
 A description of this package.

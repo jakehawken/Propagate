@@ -43,23 +43,13 @@ public extension Result {
         return self
     }
     
-    /**
-    Maps from one the given result to a new one. The generated result has an informative error type which clearly delineates if the error was in the original result or as a result of mapping. The type of the error is `MapError<T,E,Q>` where Q is the desired mapped value. If the first result is a failure, the error for the mapped result will be `.originalError` with the original error as an associated value. If the the first result is a success but the map block returns `nil`, then the error for the mapped result will be `.mappingError` with the unmappable value as the associated value (e.g. If passing `5` into the mapBlock causes the block to return nil, the error for the new result will be `.mappingError(5)`).
-    
-    - Parameter mapBlock: The mapping block, which is executed if the first result is a success. The block takes a single argument, which is of the success type `Success` of the original future, and returns an optional: `TargetType?`. TargetType is the desired mapped value.
-    - returns: A new result where Success type is `TargetType` and the error type is `MapError<Success, Failure, TargetType>`
-    */
-    func flatMap<TargetType>(_ mapBlock: (Success) -> (TargetType?)) -> Result<TargetType, MapError<Success, Failure, TargetType>> {
+    /// Convenience property for converting the state of result into an optional `Success`. Returns nil in failure case.
+    var success: Success? {
         switch self {
         case .success(let value):
-            if let transformedValue = mapBlock(value) {
-                return .success(transformedValue)
-            }
-            else {
-                return .failure(.mappingError(value))
-            }
-        case .failure(let previousError):
-            return .failure(.originalError(previousError))
+            return value
+        case .failure:
+            return nil
         }
     }
     
@@ -70,16 +60,6 @@ public extension Result {
             return nil
         case .failure(let value):
             return value
-        }
-    }
-    
-    /// Convenience property for converting the state of result into an optional `Success`. Returns nil in failure case.
-    var success: Success? {
-        switch self {
-        case .success(let value):
-            return value
-        case .failure:
-            return nil
         }
     }
     

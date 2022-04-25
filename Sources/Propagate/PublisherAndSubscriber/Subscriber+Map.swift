@@ -9,27 +9,33 @@ import Foundation
 
 public extension Subscriber {
     
+    /// Using the supplied transform, maps the states received by this
+    /// subscriber to states of a different type on a new subscriber.
     func mapState<NewT, NewE: Error>(
         _ transform: @escaping (StreamState<T,E>) -> StreamState<NewT, NewE>
     ) -> Subscriber<NewT, NewE> {
-        let newSubscriber = Subscriber<NewT,NewE>(
-            canceller: Canceller(cancelAction: { _ in
-                _ = self // self reference to keep the original subscriber alive
-            })
-        )
+        let newPublisher = Publisher<NewT,NewE>()
         
         subscribe { oldState in
             let newState = transform(oldState)
-            newSubscriber.receive(newState)
+            newPublisher.publishNewState(newState)
         }
+        
+        let newSubscriber = newPublisher.subscriber()
         
         safePrint(
             "Mapping \(self) to \(newSubscriber)",
             logType: .operators
         )
         return newSubscriber
+            .onCancelled {
+                _ = self // Capturing self to keep subscriber alive for easier chaining.
+            }
     }
     
+    /// Using the supplied transform, maps the values from `.data` states received by
+    /// this subscriber to `.data` values of a different type on a new subscriber.
+    /// Other states (`.error` and `.cancelled`) pass through like normal.
     func mapValues<NewT>(_ transform: @escaping (T) -> NewT) -> Subscriber<NewT, E> {
         return mapState { oldState in
             switch oldState {
@@ -48,6 +54,9 @@ public extension Subscriber {
         }
     }
     
+    /// Using the supplied transform, maps the errors from `.error` states received by
+    /// this subscriber to `.error` errors of a different type on a new subscriber.
+    /// Other states (`.data` and `.cancelled`) pass through like normal.
     func mapErrors<NewE: Error>(_ transform: @escaping (E) -> NewE) -> Subscriber<T, NewE> {
         return mapState { oldState in
             switch oldState {
@@ -82,6 +91,9 @@ public extension Subscriber {
         }
         
         return publisher.subscriber()
+            .onCancelled {
+                _ = self // Capturing self to keep subscriber alive for easier chaining.
+            }
     }
     
     /// Performs the mapping transformation to each `.data` state. If the
@@ -104,6 +116,9 @@ public extension Subscriber {
         }
         
         return publisher.subscriber()
+            .onCancelled {
+                _ = self // Capturing self to keep subscriber alive for easier chaining.
+            }
     }
     
     /// Performs the mapping transformation to each `.error` state. If the
@@ -126,6 +141,9 @@ public extension Subscriber {
         }
         
         return publisher.subscriber()
+            .onCancelled {
+                _ = self // Capturing self to keep subscriber alive for easier chaining.
+            }
     }
     
 }

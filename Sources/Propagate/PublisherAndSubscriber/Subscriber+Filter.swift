@@ -7,24 +7,6 @@ import Foundation
 
 public extension Subscriber {
     
-    /// Filters out `.data` states that do not match a given criteria.
-    @discardableResult func filterValues(_ isIncluded: @escaping (T) -> Bool) -> Subscriber<T,E> {
-        let publisher = Publisher<T,E>()
-        
-        subscribe { state in
-            switch state {
-            case .error, .cancelled:
-                publisher.publishNewState(state)
-            case .data(let value):
-                if isIncluded(value) {
-                    publisher.publishNewState(state)
-                }
-            }
-        }
-        
-        return publisher.subscriber()
-    }
-    
     /// Filters out all states that do not match a given criteria.
     @discardableResult func filterStates(_ isIncluded: @escaping (State) -> Bool) -> Subscriber<T,E> {
         let publisher = Publisher<T,E>()
@@ -37,6 +19,33 @@ public extension Subscriber {
         }
         
         return publisher.subscriber()
+            .onCancelled {
+                _ = self // Capturing self to keep subscriber alive for easier chaining.
+            }
+    }
+    
+    /// Filters out `.data` states that do not match a given criteria.
+    @discardableResult func filterValues(_ isIncluded: @escaping (T) -> Bool) -> Subscriber<T,E> {
+        filterStates { state in
+            switch state {
+            case .error, .cancelled:
+                return true
+            case .data(let value):
+                return isIncluded(value)
+            }
+        }
+    }
+    
+    /// Filters out `.error` states that do not match a given criteria.
+    @discardableResult func filterErrors(_ isIncluded: @escaping (E) -> Bool) -> Subscriber<T,E> {
+        filterStates { state in
+            switch state {
+            case .data, .cancelled:
+                return true
+            case .error(let errorValue):
+                return isIncluded(errorValue)
+            }
+        }
     }
     
 }
@@ -67,6 +76,9 @@ public extension Subscriber where T: Equatable {
         }
         
         return publisher.subscriber()
+            .onCancelled {
+                _ = self // Capturing self to keep subscriber alive for easier chaining.
+            }
     }
     
 }
@@ -101,6 +113,9 @@ public extension Subscriber where T: Equatable, E: Equatable {
         }
         
         return publisher.subscriber()
+            .onCancelled {
+                _ = self // Capturing self to keep subscriber alive for easier chaining.
+            }
     }
     
 }

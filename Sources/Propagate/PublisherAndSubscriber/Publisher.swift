@@ -5,6 +5,10 @@
 
 import Foundation
 
+/// The "fountainhead" object responsible for kicking off events in a
+/// data stream. Vends `Subscriber` objects which receive the events
+/// emitted by this publisher. A publisher can have zero, one, or many
+/// subscribers.
 public class Publisher<T, E: Error> {
     
     public typealias State = StreamState<T, E>
@@ -17,10 +21,12 @@ public class Publisher<T, E: Error> {
         safePrint("Created new publisher: \(self)", logType: .lifeCycle)
     }
     
+    /// Emits a new `StreamState`. If this publisher has previously been
+    /// cancelled, this method will be a no-op.
     internal func publishNewState(_ state: State) {
         safePrint("Publishing state \(state) from \(self)", logType: .pubSub)
         lockQueue.async {
-            guard !self.isCancelled else {
+            if self.isCancelled {
                 return
             }
             self.subscribers.forEach { $0.receive(state) }
@@ -34,6 +40,12 @@ public class Publisher<T, E: Error> {
         handleCancellation()
     }
     
+    /// Returns a subscriber which receives each state published by this publisher.
+    ///
+    /// At any time the subcsciber can call its own `cancel()` method, which will
+    /// remove it from this publisher. Conversely, this publisher can call
+    /// `cancelAll()`, which will remove all subscribers and emit the `.cancelled`
+    /// state on each of them.
     public func subscriber() -> Subscriber<T, E> {
         /*
          Any changes made to this function's implementation will
@@ -66,14 +78,23 @@ extension Publisher: CustomStringConvertible {
 
 public extension Publisher {
     
+    /// Publishes a new `.data` state.
+    /// - Parameter model: the associated value
+    /// for the `.data` state.
     func publish(_ model: T) {
         publishNewState(.data(model))
     }
     
+    /// Publishes a new `.error` state.
+    /// - Parameter error: the associated value
+    /// for the `.error` state.
     func publish(_ error: E) {
         publishNewState(.error(error))
     }
     
+    /// Maps a `Result<T,E>` to a `StreamState<T,E>` and
+    /// publishes it. A `.success` will map to a `.data`
+    /// state, and a `failure` will map to a `.error` state.
     func publishState(forResult result: Result<T,E>) {
         switch result {
         case .success(let value):
@@ -83,6 +104,11 @@ public extension Publisher {
         }
     }
     
+    /// Removes all subscribers and emits a `.cancelled`
+    /// state to each of them.
+    ///
+    /// This method only triggers actions the first time
+    /// it is called. Subsequent calls are a no-op.
     func cancelAll() {
         lockQueue.async {
             self.handleCancellation()
@@ -98,6 +124,7 @@ private extension Publisher {
     func removeSubscriber(_ subscriber: Subscriber<T,E>) {
         safePrint("Removing \(subscriber) from \(self)", logType: .pubSub)
         self.subscribers.pruneIf { $0 === subscriber }
+        subscriber.receive(.cancelled)
     }
     
     func handleCancellation() {
@@ -150,7 +177,7 @@ public class StatefulPublisher<T,E: Error>: Publisher<T, E> {
             return _lastState
         }
         set {
-            if let value = newValue {
+            if let value = newValue { // Value is only saved if non-nil
                 _lastState = value
             }
         }
