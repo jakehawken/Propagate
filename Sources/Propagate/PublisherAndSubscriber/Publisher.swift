@@ -1,5 +1,5 @@
 //  StreamPublisher.swift
-//  JSync
+//  Propagate
 //  Created by Jake Hawken on 4/5/20.
 //  Copyright © 2020 Jake Hawken. All rights reserved.
 
