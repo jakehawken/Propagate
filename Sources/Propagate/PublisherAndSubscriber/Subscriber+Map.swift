@@ -1,5 +1,5 @@
 //  Subscriber+Map.swift
-//  JSync
+//  Propagate
 //  Created by Jacob Hawken on 3/8/22.
 //  Copyright © 2022 Jake Hawken. All rights reserved.
 
