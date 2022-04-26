@@ -104,6 +104,14 @@ loginManager.subscribeToLoginState()
     }
 ```
 
+### Primary Differences
+
+As you may have noted in the two paradigms, the patterns of usage are similar. The major distinctions are:
+
+1. Promises/Futures (hereafter 'P/F') can receive only one state, whereas Publishers/Subscribers (hereafter 'P/S') can receive many.
+2. P/F has two possible completion states (`.success` and `.failure`), whereas P/S has three possible states per update (`.data`, `.error`, and `.cancelled`).
+3. The relationship in P/F is 1:1 whereas in P/S the relationship is 1:many. Promise vends a single future, accessed by calling the `future` property, whereas calling the `subscriber()` method on Publisher generates a new subscriber every time.
+
 ### Operators
 
 ** DOCUMENTATION COMING SOON **
