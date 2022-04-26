@@ -1,5 +1,5 @@
 //  WeakBox.swift
-//  JSync
+//  Propagate
 //  Created by Jacob Hawken on 2/15/22.
 //  Copyright © 2022 Jake Hawken. All rights reserved.
 
