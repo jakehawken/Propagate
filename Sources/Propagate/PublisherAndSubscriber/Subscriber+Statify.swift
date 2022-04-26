@@ -1,5 +1,5 @@
-
 //  Subscriber+Statify.swift
+//  Propagate
 //  Created by Jacob Hawken on 4/17/22.
 
 import Foundation
