@@ -1,5 +1,5 @@
 //  Promise.swift
-//  JSync
+//  Propagate
 //  Created by Jacob Hawken on 10/7/17.
 //  Copyright © 2017 CocoaPods. All rights reserved.
 

@@ -1,11 +1,9 @@
-//  Promise+Mapping.swift
-//  JSync
-//  Created by Jake Hawken on 11/27/19.
-//  Copyright © 2019 Jacob Hawken. All rights reserved.
+//  Future+Map.swift
+//  Propagate
+//  Created by Jacob Hawken on 4/25/22.
 
 import Foundation
 
-//swiftlint:disable line_length
 public extension Future {
     
     /**
@@ -158,12 +156,10 @@ public extension Future {
 
 public extension Future {
     
-    /**
-    Operator. Maps the result of this future to the kicking off of another future.
-    
-    - Parameter mapBlock: Closure which generates the new future. Takes in the `Result<T,E>` from the completion of the first future.
-    - returns: The new future, as a `@discardableResult` to allow for the chaining of mutation/callback methods.
-    */
+    /// Operator. Maps the result of this future to the kicking off of another future. Primarily used to serialize async work.
+    ///
+    /// - Parameter mapBlock: Closure which generates the new future. Takes in the `Result<T,E>` from the completion of the first future.
+    /// - returns: The new future, as a `@discardableResult` to allow for the chaining of operators.
     @discardableResult func flatMap<NewT, NewE: Error>(_ mapBlock: @escaping (Result<T,E>) -> Future<NewT,NewE>) -> Future<NewT,NewE> {
         let promise = Promise<NewT,NewE>()
         
@@ -196,20 +192,6 @@ public extension Future {
         }
         
         return promise.future
-    }
-    
-}
-
-public extension Promise {
-    
-    /**
-    Convenience method for completing a promise based on the result of a given future with the same generic types.
-    
-    - Parameter future: A future with the same success and error types as the promise. On completion of the future,
-      the corresponding completion state will be triggered on the promise.
-    */
-    func completeOn(future: Future<T, E>) {
-        future.finally(complete(withResult:))
     }
     
 }

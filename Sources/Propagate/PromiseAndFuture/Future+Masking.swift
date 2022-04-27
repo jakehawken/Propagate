@@ -1,4 +1,5 @@
-//  File.swift
+//  Future+Masking.swift
+//  Propagate
 //  Created by Jacob Hawken on 4/5/22.
 
 import Foundation
