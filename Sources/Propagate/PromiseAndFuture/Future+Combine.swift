@@ -13,7 +13,7 @@ public extension Future {
      - returns: A future where the success value is an array of the success values from the array of promises, and the error
        is whichever error happened first.
     */
-    static func zip(_ futures: [Future<T, E>]) -> Future<[T], E> {
+    static func merge(_ futures: [Future<T, E>]) -> Future<[T], E> {
         let promise = Promise<[T], E>()
         
         futures.forEach {
