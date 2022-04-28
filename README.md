@@ -104,7 +104,7 @@ loginManager.subscribeToLoginState()
     }
 ```
 
-### Primary Differences
+## Primary Differences
 
 As you may have noted in the two paradigms, the patterns of usage are similar. The major distinctions are:
 
@@ -112,9 +112,9 @@ As you may have noted in the two paradigms, the patterns of usage are similar. T
 2. Promise/Future has two possible completion states (`.success` and `.failure`), whereas Publisher/Subscriber has three possible states per update (`.data`, `.error`, and `.cancelled`).
 3. The relationship between a Promise and a Future is 1:1 whereas with Publisher/Subscriber the relationship is 1:many. A Promise vends a single future, accessed by calling the `future` property, whereas calling the `subscriber()` method on Publisher generates a new Subscriber every time.
 
-### Operators
+## Operators
 
-#### Map
+### Map
 
 Since both paradigms are genericized not just for their success/value types but also for their error types, there are separate convenience operators for mapping values, mapping errors, and mapping overall states.
 
@@ -122,7 +122,7 @@ When calling the value- or error-specific methods, the other state(s) pass throu
 
 Both paradigms have a means of mapping all possible states at once. `mapResult(_:)` on Future takes a closure which receives the final `Result<T,E>` state of the future and returns a result with potentially different value and error types. `mapStates(_:)` on Subscriber takes a closure which receives each incoming `StreamState<T,E>` and returns a new one with (you guessed it) potentially different value and error types.
 
-##### flatMap
+#### Flat Map
 
 There are some other flavors of map included in this library, but the only other one I will call out is flatMap. Oftentimes, you have multiple asynchronous tasks that need to be serialized to happen in a specific order. And in many of those cases you also need the output of one task in order to start the next. This is where Future's `flatMap` methods come into play.
 
@@ -138,6 +138,18 @@ getProductID
     }
 ```
 
-### Combine / Merge
+#### Combine / Merge
+
+Many times, you have multiple bits of asynchronous work that you need to coordinate; be it anything from views responding to changing streams of information, to accumulating necessary inputs to make a network call, to waiting for multiple uploads or downloads to complete. Propagate provides a host of tools for dealing with situations like these.
+
+##### Merge
+
+Both Future and Subscriber have merge methods, with slightly different semantics.
+
+On future, the method takes an array of futures of the same generic type and generates a new one where the success type is an array of whatever the type of the input futures was (e.g. if the array was of `Future<Int,NSError>`s, the output will be a single `Future<[Int],NSError>`). This future will complete when all of the original futures complete. It will fail when the first one fails.
+
+On subscriber, the syntax is similar, but the semantics are different. Much like the merge method on Future, it takes an array of same-typed subscribers and returns a singe one. Where it begins to differ is that, unlike the method on future, the returned subscriber has identical generic type to the inputs (e.g. merging an array of `Subscriber<Int,NSError>`s will return a `Subscriber<Int,NSError>`). Any emission from any of the original subscribers will emit from the new subscriber. This is effectively putting all of their results into a single bus.
+
+##### Combine
 
 ** DOCUMENTATION COMING SOON **
