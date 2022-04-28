@@ -114,4 +114,30 @@ As you may have noted in the two paradigms, the patterns of usage are similar. T
 
 ### Operators
 
+#### Map
+
+Since both paradigms are genericized not just for their success/value types but also for their error types, there are separate convenience operators for mapping values, mapping errors, and mapping overall states.
+
+When calling the value- or error-specific methods, the other state(s) pass through as normal. This means, for example, that if you have a `Future<Int,NSError>` and you call `mapValue { return "\($0)" }` you now have a `Future<String,NSError>`. The value type has been transformed, but the error type has stayed the same. The same goes for the error-mapping methods: the value type would stay the same, but the error type would change. This is helpful when you want the layers of your application to have clearly domained errors with specific ways of handling each.
+
+Both paradigms have a means of mapping all possible states at once. `mapResult(_:)` on Future takes a closure which receives the final `Result<T,E>` state of the future and returns a result with potentially different value and error types. `mapStates(_:)` on Subscriber takes a closure which receives each incoming `StreamState<T,E>` and returns a new one with (you guessed it) potentially different value and error types.
+
+##### flatMap
+
+There are some other flavors of map included in this library, but the only other one I will call out is flatMap. Oftentimes, you have multiple asynchronous tasks that need to be serialized to happen in a specific order. And in many of those cases you also need the output of one task in order to start the next. This is where Future's `flatMap` methods come into play.
+
+`flatMap` takes in a closure which--in the case of `flatMapSuccess(_:)` takes in the success value, or in the case of `flatMap(_:)` takes in the result---and returns a new future, representing the next bit of asynchronous work. This allows you to chain futures like so:
+
+```Swift
+getProductID
+    .flatMapSuccess {
+        fetchProduct(id: $0)
+    }
+    .flatMapSuccess { product in
+        fetchRelatedData(for: product)
+    }
+```
+
+### Combine / Merge
+
 ** DOCUMENTATION COMING SOON **
