@@ -21,6 +21,30 @@ public extension Subscriber {
             }
     }
     
+    /// Generates a subscriber that only ever receives a single value, and which will
+    /// synchronously emit when a new subscrition to that subscriber is added.
+    static func of(_ value: T) -> Subscriber {
+        let publisher = StatefulPublisher<T,E>()
+        publisher.publish(value)
+        return publisher.subscriber()
+            .onCancelled {
+                // Capturing publisher so that the last received state can be retained.
+                _ = publisher
+            }
+    }
+    
+    /// Generates a subscriber that only ever receives a single error, and which will
+    /// synchronously emit when a new subscrition to that subscriber is added.
+    static func of(_ error: E) -> Subscriber {
+        let publisher = StatefulPublisher<T,E>()
+        publisher.publish(error)
+        return publisher.subscriber()
+            .onCancelled {
+                // Capturing publisher so that the last received state can be retained.
+                _ = publisher
+            }
+    }
+    
     /// After the first n `.data` states has been received, emits
     /// an array of the last n states on each subsequent emission.
     ///

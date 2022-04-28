@@ -18,6 +18,8 @@ public class Subscriber<T, E: Error> {
     private lazy var callbackQueue = DispatchQueue(label: "SubscriberCallbackQueue-\(UUID().uuidString)")
     private lazy var callbacks = SinglyLinkedList<ExecutionPair>(firstValue: (callbackQueue, { _ in }))
     
+    private(set) public var isCancelled = false
+    
     internal init(canceller: Canceller<T,E>) {
         self.canceller = canceller
         self.callbackQueue = callbackQueue
@@ -65,6 +67,7 @@ internal extension Subscriber {
     /// its publisher. This will result in this subscriber
     /// immediately receiving a `.cancelled` signal.
     func cancel() {
+        isCancelled = true
         canceller.cancel(for: self)
     }
     
@@ -80,6 +83,7 @@ private extension Subscriber {
             queue.async { action(state) }
         }
         if case .cancelled = state {
+            isCancelled = true
             callbacks.trimToRoot()
         }
     }
