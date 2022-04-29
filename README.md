@@ -138,11 +138,11 @@ getProductID
     }
 ```
 
-#### Combine / Merge
+### Combine / Merge
 
 Many times, you have multiple bits of asynchronous work that you need to coordinate; be it anything from views responding to changing streams of information, to accumulating necessary inputs to make a network call, to waiting for multiple uploads or downloads to complete. Propagate provides a host of tools for dealing with situations like these.
 
-##### Merge
+#### Merge
 
 Both Future and Subscriber have merge methods, with slightly different semantics.
 
@@ -150,6 +150,47 @@ On future, the method takes an array of futures of the same generic type and gen
 
 On subscriber, the syntax is similar, but the semantics are different. Much like the merge method on Future, it takes an array of same-typed subscribers and returns a singe one. Where it begins to differ is that, unlike the method on future, the returned subscriber has identical generic type to the inputs (e.g. merging an array of `Subscriber<Int,NSError>`s will return a `Subscriber<Int,NSError>`). Any emission from any of the original subscribers will emit from the new subscriber. This is effectively putting all of their results into a single bus.
 
-##### Combine
+#### Combine
+
+Unlike `merge`, which amalgamates futures or subscribers which have the same value and error types, `combine` joins futures/susbscribers with differing value types (but with the same error type). In both cases, the success/value type on what is returned is a tuple of the value types from the sources.
+
+Future:
+```Swift
+let myIntFuture = doIntThing() // Future<Int,NSError>
+let myStringFuture = doStringThing() // Future<String,NSError>
+let combinedFuture = Future.combine(myIntFuture, myStringFuture) // => Future<(Int,String),NSError>
+```
+
+Subscriber:
+```Swift
+let intSubscriber = getInts() // Subscriber<Int,NSError>
+let stringSubscriber = getStrings() // Subscriber<String,NSError>
+let combinedSub = Subscriber.combine(intSubscriber, stringSubscriber) // => Subscriber<(Int,String),NSError>
+
+// Alternativelly, you can call combine as an instance method on whichever subscriber
+// you want to show up first in the tuple:
+
+let combinedSub = intSubscriber.combineWith(stringSubscriber) // => Subscriber<(Int,String),NSError>
+```
+
+As you can see above, the syntax is nearly identical. And in both paradigms, this can currently be done to a depth of a 4-item tuple. Since the types are different, collections can't be used, so a bespoke method has to be made for each number of elements being combined. So, for now, we have combine methods for 1, 2, 3, and 4 differnt items.
+
+(I actually currently have a use case where I'm going to want 5, so expect to see that soon. Luckily, I've written them in a way that combining them and then flattening them to make new ones is a faily easy process.)
+
+On Subscriber specifically, when you call combine, it starts off similar in behavior to Future, which is to say that it won't emit until all of its source subscribers have emitted. But after that point, it behaves differently. Each subsequent time any of sources emit, the combined subscriber emits a new tuple, with that source subscriber's corresponding tuple value updated. To demonstrate
+
+```Swift
+let intSubscriber = getInts()
+let stringSubscriber = getStrings()
+let combinedSub = Subscriber.combine(intSubscriber, stringSubscriber)
+
+// intSubscriber receives 5, combinedSub does nothing becase stringSubscriber hasn't emitted yet
+// stringSubscriber receives "boop", combined sub emits (5, "boop")
+
+// stringSubscriber recieves "BEEP", combined sub emits (5, "BEEP")
+// intSubscriber receives 23, combined sub emits (23, "BEEP")
+```
+
+### Filter
 
 ** DOCUMENTATION COMING SOON **
