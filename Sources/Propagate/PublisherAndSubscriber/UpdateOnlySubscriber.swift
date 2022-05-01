@@ -87,7 +87,7 @@ public extension UpdateOnlySubscriber {
     
     /// Adds a subscription block for when the underlying Subscriber receives new data, and is
     /// executed on the given dispatch queue.
-    func subscribe(onQueue queue: DispatchQueue, _ action: @escaping () -> Void) -> Self {
+    @discardableResult func subscribe(onQueue queue: DispatchQueue, _ action: @escaping () -> Void) -> Self {
         subscribeOnQueueClosure(queue, action)
         return self
     }
@@ -101,7 +101,7 @@ public extension UpdateOnlySubscriber {
     
     /// Adds a subscription block for when the underlying Subscriber is cancelled, and is
     /// executed on the given dispatch queue.
-    func onCancelled(onQueue queue: DispatchQueue, _ action: @escaping () -> Void) -> Self {
+    @discardableResult func onCancelled(onQueue queue: DispatchQueue, _ action: @escaping () -> Void) -> Self {
         cancelOnQueueClosure(queue, action)
         return self
     }

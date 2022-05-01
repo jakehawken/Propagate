@@ -77,7 +77,7 @@ public extension ValueOnlySubscriber {
     
     /// Adds a subscription block for new values, to be executed on new data, on the given
     /// dispatch queue. If subscriber is already cancelled, action is neither saved nor executed.
-    func onNext(onQueue queue: DispatchQueue, _ action: @escaping ValueCallback) -> Self {
+    @discardableResult func onNext(onQueue queue: DispatchQueue, _ action: @escaping ValueCallback) -> Self {
         guard !isCancelled else {
             return self
         }
@@ -95,7 +95,7 @@ public extension ValueOnlySubscriber {
     
     /// Adds a subscription block for cancellation. If subscriber is already cancelled,
     /// action is executed synchronously on the given dispatch queue.
-    func onCancelled(
+    @discardableResult func onCancelled(
         onQueue queue: DispatchQueue,
         _ action: @escaping CancellationCallback
     ) -> Self {
