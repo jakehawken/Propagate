@@ -114,6 +114,8 @@ As you may have noted in the two paradigms, the patterns of usage are similar. T
 
 ## Operators
 
+Propagate comes with a host of operators and helper methods, and I'd encourage you to look through the source code (it's a fairly small library, so this shouldn't be too hard) and check them all out. Here is an abbreviated list of some of the "tent pole" operators.
+
 ### Map
 
 Since both paradigms are genericized not just for their success/value types but also for their error types, there are separate convenience operators for mapping values, mapping errors, and mapping overall states.
@@ -191,6 +193,39 @@ let combinedSub = Subscriber.combine(intSubscriber, stringSubscriber)
 // intSubscriber receives 23, combined sub emits (23, "BEEP")
 ```
 
-### Filter
+#### Filter
 
-** DOCUMENTATION COMING SOON **
+(This operator is not available for Future.)
+
+Filter is an operator on Subscriber that only allows `.data` states to pass through if they meet a certain criteria. This is useful for sanitizing user input, waiting for specific states, or for any other situation where only a narrow set of values are valid.
+
+#### Mix and match!
+
+The beauty of all of these operators is that, since each of them return either an themselves or something similar, you can chain the operators to get what you really want. An example:
+
+```Swift
+let emailSub = emailInputSub
+    .compactMapValues { $0 }            // Filter out non-nil values.
+    .filter { isValidEmail($0) }        // Call into a helper function to check if email address is valid
+    
+let passwordSub = Subscriber.merge(passwordInput1, passwordInput2)
+    .filter { $0.0 == $0.1 }                                        // when the two passwords match
+    .map { $0.0 }                                                   // pass along one of them
+    .compactMapValues { $0 }                                        // only take a non-nil value
+    .filter {                                                       // make sure the password matches your rules
+        $0.count > 7 &&
+        $0.rangeOfCharacter(from: .decimalDigits) != nil &&
+        $0.rangeOfCharacter(from: .capitalizedLetters) != nil &&
+        $0.rangeOfCharacter(from: .lowercaseLetters) != nil &&
+        $0.rangeOfCharacter(from: .whitespacesAndNewlines) == nil
+    }
+    
+createAcccount = Subscriber.combine(
+    emailSub,
+    passwordSub,
+    didTapEnterSub
+)
+    .onNewData { email, password, _ in
+        authService.createAccountWith(email: email, password: password)
+    }
+```
