@@ -105,6 +105,15 @@ public extension Future {
         return promise.future
     }
     
+    /// Instance method for static `Future.combine(_:_:)`
+    ///
+    /// Combine two futures with a shared error type but hypothetically different success types
+    /// into one future where the value type is a tuple of the two value types. Succeeds when
+    /// both futures have succeeded. Fails when the first of them fails.
+    func combineWith<T2>(_ other: Future<T2, E>) -> Future<(T,T2),E> {
+        return Future.combine(self, other)
+    }
+    
     /// Combine three futures with a shared error type but hypothetically different success types
     /// into one future where the value type is a tuple of the three value types. Succeeds when
     /// all futures have succeeded. Fails when the first of them fails.
@@ -112,11 +121,20 @@ public extension Future {
         // Combine 1 + (1 + 1)
         return Future.combine(
             future1,
-            Future<T2,E>.combine(future2, future3)
+            future2.combineWith(future3)
         )
         .mapValue { nestedTuple in
             (nestedTuple.0, nestedTuple.1.0, nestedTuple.1.1)
         }
+    }
+    
+    /// Instance method for static `Future.combine(_:_:_:)`
+    ///
+    /// Combine three futures with a shared error type but hypothetically different success types
+    /// into one future where the value type is a tuple of the three value types. Succeeds when
+    /// all futures have succeeded. Fails when the first of them fails.
+    func combineWith<T2,T3>(_ future2: Future<T2, E>, _ future3: Future<T3,E>) -> Future<(T,T2,T3),E> {
+        return Future.combine(self, future2, future3)
     }
     
     /// Combine four futures with a shared error type but hypothetically different success types
@@ -125,12 +143,91 @@ public extension Future {
     static func combine<T2,T3,T4>(_ future1: Future<T,E>, _ future2: Future<T2,E>, _ future3: Future<T3,E>, _ future4: Future<T4,E>) -> Future<(T,T2,T3,T4), E> {
         // Combine (1 + 1) + (1 + 1)
         return Future<(T,T2),E>.combine(
-            Future.combine(future1, future2),
-            Future<T3,E>.combine(future3, future4)
+            future1.combineWith(future2),
+            future3.combineWith(future4)
         )
         .mapValue { nestedTuple in
             (nestedTuple.0.0, nestedTuple.0.1, nestedTuple.1.0, nestedTuple.1.1)
         }
+    }
+    
+    /// Instance method for static `Future.combine(_:_:_:_:)`
+    ///
+    /// Combine four futures with a shared error type but hypothetically different success types
+    /// into one future where the value type is a tuple of the three value types. Succeeds when
+    /// all futures have succeeded. Fails when the first of them fails.
+    func combineWith<T2,T3,T4>(_ future2: Future<T2, E>, _ future3: Future<T3,E>, _ future4: Future<T4,E>) -> Future<(T,T2,T3,T4),E> {
+        return Future.combine(self, future2, future3, future4)
+    }
+    
+    /// Combine five futures with a shared error type but hypothetically different success types
+    /// into one future where the value type is a tuple of the three value types. Succeeds when
+    /// all futures have succeeded. Fails when the first of them fails.
+    static func combine<T2,T3,T4,T5>(
+        _ future1: Future<T,E>,
+        _ future2: Future<T2,E>,
+        _ future3: Future<T3,E>,
+        _ future4: Future<T4,E>,
+        _ future5: Future<T5,E>
+    ) -> Future<(T,T2,T3,T4,T5), E> {
+        // Comibe (1 + 1) + (1 + 1 + 1)
+        return Future<(T,T2),E>.combine(
+            future1.combineWith(future2),
+            future3.combineWith(future4, future5)
+        )
+        .mapValue {
+            ($0.0.0, $0.0.1, $0.1.0, $0.1.1, $0.1.2)
+        }
+    }
+    
+    /// Instance method for static `Future.combine(_:_:_:_:_:)`
+    ///
+    /// Combine five futures with a shared error type but hypothetically different success types
+    /// into one future where the value type is a tuple of the three value types. Succeeds when
+    /// all futures have succeeded. Fails when the first of them fails.
+    func combineWith<T2,T3,T4,T5>(
+        _ future2: Future<T2, E>,
+        _ future3: Future<T3,E>,
+        _ future4: Future<T4,E>,
+        _ future5: Future<T5,E>
+    ) -> Future<(T,T2,T3,T4,T5),E> {
+        return Future.combine(self, future2, future3, future4, future5)
+    }
+    
+    /// Combine six futures with a shared error type but hypothetically different success types
+    /// into one future where the value type is a tuple of the three value types. Succeeds when
+    /// all futures have succeeded. Fails when the first of them fails.
+    static func combine<T2,T3,T4,T5,T6>(
+        _ future1: Future<T,E>,
+        _ future2: Future<T2,E>,
+        _ future3: Future<T3,E>,
+        _ future4: Future<T4,E>,
+        _ future5: Future<T5,E>,
+        _ future6: Future<T6,E>
+    ) -> Future<(T,T2,T3,T4,T5,T6), E> {
+        // Comibe (1 + 1 + 1) + (1 + 1 + 1)
+        return Future<(T,T2,T3),E>.combine(
+            future1.combineWith(future2, future3),
+            future4.combineWith(future5, future6)
+        )
+        .mapValue {
+            ($0.0.0, $0.0.1, $0.0.2, $0.1.0, $0.1.1, $0.1.2)
+        }
+    }
+    
+    /// Instance method for static `Future.combine(_:_:_:_:_:_:)`
+    ///
+    /// Combine six futures with a shared error type but hypothetically different success types
+    /// into one future where the value type is a tuple of the three value types. Succeeds when
+    /// all futures have succeeded. Fails when the first of them fails.
+    func combineWith<T2,T3,T4,T5,T6>(
+        _ future2: Future<T2, E>,
+        _ future3: Future<T3,E>,
+        _ future4: Future<T4,E>,
+        _ future5: Future<T5,E>,
+        _ future6: Future<T6,E>
+    ) -> Future<(T,T2,T3,T4,T5,T6),E> {
+        return Future.combine(self, future2, future3, future4, future5, future6)
     }
     
 }
