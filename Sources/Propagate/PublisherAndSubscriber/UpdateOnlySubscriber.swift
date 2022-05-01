@@ -65,32 +65,52 @@ public class UpdateOnlySubscriber {
         }
     }
     
+    /// This mehtod allows you to inflate a UpdateOnlySubscriber back to a regular
+    /// Subscriber.
+    ///
+    /// Without doing anything else, however, this will return a Subscriber that
+    /// won't ever receive its error state. Error states, however can be injected
+    /// conditionally using `splitValueMap(_:)`.
+    public func fullSubscriber<E: Error>(errorType: E.Type = E.self) -> Subscriber<Void,E> {
+        let publisher = Publisher<Void,E>()
+        
+        subscribe { publisher.publish(()) }
+        
+        return publisher.subscriber().onCancelled {
+            _ = self // Capturing self to keep subscriber alive for easier chaining.
+        }
+    }
+    
 }
 
 public extension UpdateOnlySubscriber {
     
     /// Adds a subscription block for when the underlying Subscriber receives new data, and is
     /// executed on the given dispatch queue.
-    func subscribe(onQueue queue: DispatchQueue, _ action: @escaping () -> Void) {
+    func subscribe(onQueue queue: DispatchQueue, _ action: @escaping () -> Void) -> Self {
         subscribeOnQueueClosure(queue, action)
+        return self
     }
     
     /// Adds a subscription block for when the underlying Subscriber receives new data, and is
     /// executed on the Subscriber's internal dispatch queue.
-    func subscribe(_ action: @escaping () -> Void) {
+    @discardableResult func subscribe(_ action: @escaping () -> Void) -> Self {
         simpleSubscribeClosure(action)
+        return self
     }
     
     /// Adds a subscription block for when the underlying Subscriber is cancelled, and is
     /// executed on the given dispatch queue.
-    func onCancelled(onQueue queue: DispatchQueue, _ action: @escaping () -> Void) {
+    func onCancelled(onQueue queue: DispatchQueue, _ action: @escaping () -> Void) -> Self {
         cancelOnQueueClosure(queue, action)
+        return self
     }
     
     /// Adds a subscription block for when the underlying Subscriber is cancelled, and is
     /// executed on the Subscriber's internal dispatch queue.
-    func onCancelled(_ action: @escaping () -> Void) {
+    @discardableResult func onCancelled(_ action: @escaping () -> Void) -> Self {
         simpleCancelClosure(action)
+        return self
     }
     
 }

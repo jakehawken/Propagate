@@ -55,48 +55,69 @@ public class ValueOnlySubscriber<T> {
         }
     }
     
+    /// This mehtod allows you to inflate a ValueOnlySubscriber back to a regular
+    /// Subscriber.
+    ///
+    /// Without doing anything else, however, this will return a Subscriber that
+    /// won't ever receive its error state. Error states, however can be injected
+    /// conditionally using `splitValueMap(_:)`.
+    public func fullSubscriber<E: Error>(errorType: E.Type = E.self) -> Subscriber<T,E> {
+        let publisher = Publisher<T,E>()
+        
+        onNext { publisher.publish($0) }
+        
+        return publisher.subscriber().onCancelled {
+            _ = self // Capturing self to keep subscriber alive for easier chaining.
+        }
+    }
+    
 }
 
 public extension ValueOnlySubscriber {
     
     /// Adds a subscription block for new values, to be executed on new data, on the given
     /// dispatch queue. If subscriber is already cancelled, action is neither saved nor executed.
-    func onNext(onQueue queue: DispatchQueue, _ action: @escaping ValueCallback) {
+    func onNext(onQueue queue: DispatchQueue, _ action: @escaping ValueCallback) -> Self {
         guard !isCancelled else {
-            return
+            return self
         }
         lockQueue.async { [weak self] in
             self?.valueCallbacks.append((queue, action))
         }
+        return self
     }
     
     /// Adds a subscription block for new values, to be executed on new data, on the subscriber's
     /// internal queue. If subscriber is already cancelled, action is neither saved nor executed.
-    func onNext(_ action: @escaping ValueCallback) {
+    @discardableResult func onNext(_ action: @escaping ValueCallback) -> Self {
         onNext(onQueue: callbackQueue, action)
     }
     
     /// Adds a subscription block for cancellation. If subscriber is already cancelled,
     /// action is executed synchronously on the given dispatch queue.
-    func onCancelled(onQueue queue: DispatchQueue, _ action: @escaping CancellationCallback) {
+    func onCancelled(
+        onQueue queue: DispatchQueue,
+        _ action: @escaping CancellationCallback
+    ) -> Self {
         guard !isCancelled else {
             queue.sync { action() }
-            return
+            return self
         }
         lockQueue.async { [weak self] in
             self?.cancelCallbacks.append((queue, action))
         }
+        return self
     }
     
     /// Adds a subscription block for cancellation. If subscriber is already cancelled,
     /// action is executed synchronously on the subscriber's internal queue.
-    func onCancelled(_ action: @escaping CancellationCallback) {
-        onCancelled(onQueue: callbackQueue, action)
+    @discardableResult func onCancelled(_ action: @escaping CancellationCallback) -> Self {
+        return onCancelled(onQueue: callbackQueue, action)
     }
     
     /// Generates a new ValueOnlySubscriber of a different type, based on the supplied
     /// closure for mapping from one type to the other.
-    func map<NewT>(mapping: @escaping (T) -> NewT) -> ValueOnlySubscriber<NewT> {
+    @discardableResult func map<NewT>(mapping: @escaping (T) -> NewT) -> ValueOnlySubscriber<NewT> {
         return ValueOnlySubscriber<NewT>(other: self, mapBlock: mapping)
     }
     
@@ -108,7 +129,7 @@ public extension ValueOnlySubscriber {
     /// let optStrings = stringSubscriber.valueOnly() // of type ValueOnlySubscriber<String?>
     /// let strings = optString.compactMap()  // Will be of type ValueOnlySubscriber<String>
     /// ```
-    func compactMap<Wrapped>() -> ValueOnlySubscriber<Wrapped> where T == Wrapped? {
+    @discardableResult func filterNil<Wrapped>() -> ValueOnlySubscriber<Wrapped> where T == Wrapped? {
         let new = ValueOnlySubscriber<Wrapped>()
         
         onNext { optionalValue in
