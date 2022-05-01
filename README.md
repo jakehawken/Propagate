@@ -205,13 +205,13 @@ The beauty of all of these operators is that, since each of them return either t
 
 ```Swift
 let emailSub = emailInputSub
-    .compactMapValues { $0 }            // Filter out non-nil values.
+    .filterNil()                        // Filter out non-nil values.
     .filter { isValidEmail($0) }        // Call into a helper function to check if email address is valid
     
 let passwordSub = Subscriber.merge(passwordInput1, passwordInput2)
     .filter { $0.0 == $0.1 }                                        // when the two passwords match
     .map { $0.0 }                                                   // pass along one of them
-    .compactMapValues { $0 }                                        // only take a non-nil value
+    .filterNil()                                                    // only take a non-nil value
     .filter {                                                       // make sure the password matches your rules
         $0.count > 7 &&
         $0.rangeOfCharacter(from: .decimalDigits) != nil &&

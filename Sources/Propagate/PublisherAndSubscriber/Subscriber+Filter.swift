@@ -51,6 +51,18 @@ public extension Subscriber {
     
 }
 
+// MARK: - Specical filters
+
+public extension Subscriber {
+    
+    @discardableResult func filterNil<Unwrapped>() -> Subscriber<Unwrapped, E> where T == Unwrapped? {
+        return compactMapValues { $0 }
+    }
+    
+}
+
+// MARK: - Distinct
+
 public extension Subscriber where T: Equatable {
     
     /// New `.data` states are only emitted if:
@@ -83,8 +95,6 @@ public extension Subscriber where T: Equatable {
     }
     
 }
-
-// MARK: - Distinct
 
 public extension Subscriber where T: Equatable, E: Equatable {
     
