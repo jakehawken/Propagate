@@ -201,7 +201,7 @@ Filter is an operator on Subscriber that only allows `.data` states to pass thro
 
 #### Mix and match!
 
-The beauty of all of these operators is that, since each of them return either an themselves or something similar, you can chain the operators to get what you really want. An example:
+The beauty of all of these operators is that, since each of them return either themselves or something similar, you can chain the operators to get what you really want. An example:
 
 ```Swift
 let emailSub = emailInputSub
