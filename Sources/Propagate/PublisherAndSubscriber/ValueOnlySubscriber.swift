@@ -75,6 +75,10 @@ public class ValueOnlySubscriber<T> {
         }
     }
     
+    deinit {
+        cancel()
+    }
+    
 }
 
 public extension ValueOnlySubscriber {
@@ -146,6 +150,34 @@ public extension ValueOnlySubscriber {
         }
         
         return new
+    }
+    
+}
+
+public extension ValueOnlySubscriber where T: Equatable {
+    
+    @discardableResult func distinctValues() -> ValueOnlySubscriber {
+        let new = ValueOnlySubscriber<T>()
+        
+        var last: T?
+        onNext { newValue in
+            guard let lastValue = last else {
+                new.executeValueCallbacks(with: newValue)
+                last = newValue
+                return
+            }
+            if newValue != lastValue {
+                new.executeValueCallbacks(with: newValue)
+                last = newValue
+            }
+        }
+        onCancelled {
+            new.cancel()
+        }
+        
+        return new.onCancelled {
+            _ = self
+        }
     }
     
 }
