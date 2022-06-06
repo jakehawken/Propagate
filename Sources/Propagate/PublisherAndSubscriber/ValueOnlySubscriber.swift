@@ -10,6 +10,10 @@ public extension Subscriber {
     /// has changed, but ignores failures.
     func valueOnly() -> ValueOnlySubscriber<T> {
         return ValueOnlySubscriber(subscriber: self)
+            .onCancelled {
+                _ = self
+                // To allow the chaining of this operator without having to retain the intervening Subscriber
+            }
     }
 
 }
