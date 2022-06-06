@@ -117,6 +117,18 @@ public extension Future {
         }
     }
     
+    /// Allows errors to conditionally trigger the success/value/data state. Used for when some error states on a subscriber represent success states in a new context.
+    @discardableResult func splitErrorMap<NewE>(_ mapping: @escaping (E) -> Result<T, NewE>) -> Future<T, NewE> {
+        mapResult { result -> Result<T, NewE> in
+            switch result {
+            case .success(let value):
+                return .success(value)
+            case .failure(let error):
+                return mapping(error)
+            }
+        }
+    }
+    
     /// When T is an optional type, this function generates a new subscriber that only emits
     /// the non-nil states. When the value is nil, this future will never complete, rather
     /// than complete with an error. Failure states will pass through.
