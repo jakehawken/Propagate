@@ -42,6 +42,9 @@ public class Subscriber<T, E: Error> {
     /// - returns: The subscriber itself, as a `@discardableResult` to allow for easy
     /// chaining of operators.
     @discardableResult public func subscribe(onQueue queue: DispatchQueue, performing callback: @escaping (State) -> Void) -> Self {
+        guard !isCancelled else {
+            return self
+        }
         lockQueue.async { [weak self] in
             self?.callbacks.append((queue, callback))
         }
@@ -78,8 +81,8 @@ internal extension Subscriber {
     /// its publisher. This will result in this subscriber
     /// immediately receiving a `.cancelled` signal.
     func cancel() {
-        isCancelled = true
         canceller.cancel(for: self)
+        receive(.cancelled)
     }
     
 }
@@ -89,6 +92,9 @@ internal extension Subscriber {
 private extension Subscriber {
     
     func executeCallbacks(forState state: State) {
+        guard !isCancelled else {
+            return
+        }
         safePrint(
             "\(self) received \(state)",
             logType: .pubSub,
