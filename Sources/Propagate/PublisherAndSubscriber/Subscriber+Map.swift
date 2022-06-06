@@ -58,6 +58,20 @@ public extension Subscriber {
         }
     }
     
+    /// Allows `.data` value to conditionally trigger the `.error` state. Used for when only a constrained range of data values are valid.
+    func splitMapValues<NewT>(_ transform: @escaping (T) -> StreamState<NewT, E>) -> Subscriber<NewT, E> {
+        return mapStates { state -> StreamState<NewT, E> in
+            switch state {
+            case .cancelled:
+                return .cancelled
+            case .error(let error):
+                return .error(error)
+            case .data(let value):
+                return transform(value)
+            }
+        }
+    }
+    
     /// Using the supplied transform, maps the errors from `.error` states received by
     /// this subscriber to `.error` errors of a different type on a new subscriber.
     /// Other states (`.data` and `.cancelled`) pass through like normal.
@@ -78,6 +92,20 @@ public extension Subscriber {
                 return .error(transformed)
             case .cancelled:
                 return .cancelled
+            }
+        }
+    }
+    
+    /// Allows `.error` state to conditionally trigger the `.data` state. Used for when some error states on a subscriber represent success states in a new context.
+    func splitMapErrors<NewE>(_ transform: @escaping (E) -> StreamState<T, NewE>) -> Subscriber<T, NewE> {
+        return mapStates { state -> StreamState<T, NewE> in
+            switch state {
+            case .cancelled:
+                return .cancelled
+            case .error(let error):
+                return transform(error)
+            case .data(let value):
+                return .data(value)
             }
         }
     }

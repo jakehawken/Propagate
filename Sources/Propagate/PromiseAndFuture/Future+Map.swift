@@ -117,7 +117,7 @@ public extension Future {
         }
     }
     
-    /// Allows errors to conditionally trigger the success/value/data state. Used for when some error states on a subscriber represent success states in a new context.
+    /// Allows errors to conditionally trigger the success/value/data state. Used for when some error states on a future represent success states in a new context.
     @discardableResult func splitErrorMap<NewE>(_ mapping: @escaping (E) -> Result<T, NewE>) -> Future<T, NewE> {
         mapResult { result -> Result<T, NewE> in
             switch result {
