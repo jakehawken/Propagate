@@ -79,7 +79,30 @@ public class ValueOnlySubscriber<T> {
         cancel()
     }
     
+    private func executeValueCallbacks(with value: T) {
+        valueCallbacks.forEach { (queue, action) in
+            queue.async { action(value) }
+        }
+    }
+    
+    private func executeCancelCallbacks() {
+        cancelCallbacks.forEach { (queue, action) in
+            queue.async { action() }
+        }
+    }
+    
+    private func cancel() {
+        lockQueue.async { [weak self] in
+            self?.isCancelled = true
+            self?.valueCallbacks.removeAll()
+            self?.executeCancelCallbacks()
+            self?.cancelCallbacks.removeAll()
+        }
+    }
+    
 }
+
+// MARK: - Subscription
 
 public extension ValueOnlySubscriber {
     
@@ -122,6 +145,12 @@ public extension ValueOnlySubscriber {
     @discardableResult func onCancelled(_ action: @escaping CancellationCallback) -> Self {
         return onCancelled(onQueue: callbackQueue, action)
     }
+    
+}
+
+// MARK: - Mapping and filtering
+
+public extension ValueOnlySubscriber {
     
     /// Generates a new ValueOnlySubscriber of a different type, based on the supplied
     /// closure for mapping from one type to the other.
@@ -182,27 +211,162 @@ public extension ValueOnlySubscriber where T: Equatable {
     
 }
 
-private extension ValueOnlySubscriber {
+// MARK: - Combination -
+
+public extension ValueOnlySubscriber {
     
-    func executeValueCallbacks(with value: T) {
-        valueCallbacks.forEach { (queue, action) in
-            queue.async { action(value) }
+    /// Combines two subscribers with different data types into one subscriber
+    /// with a data type that is a tuple of the two original subscribers.
+    static func combine<T2>(_ sub1: ValueOnlySubscriber<T>, _ sub2: ValueOnlySubscriber<T2>) -> ValueOnlySubscriber<(T,T2)> {
+        let new = ValueOnlySubscriber<(T,T2)>()
+        let tupleCreator = TwoItemTupleCreator<T,T2>()
+        
+        sub1.onNext {
+            tupleCreator.item1 = $0
+            if let tuple = tupleCreator.tuple {
+                new.executeValueCallbacks(with: tuple)
+            }
+        }
+        sub2.onNext {
+            tupleCreator.item2 = $0
+            if let tuple = tupleCreator.tuple {
+                new.executeValueCallbacks(with: tuple)
+            }
+        }
+        
+        return new.onCancelled {
+            _ = sub1
+            _ = sub2
         }
     }
     
-    func executeCancelCallbacks() {
-        cancelCallbacks.forEach { (queue, action) in
-            queue.async { action() }
+    /// Instance method for static `Subscriber.combine(_:_:)`
+    ///
+    /// Combines two subscribers with different data types into one subscriber
+    /// with a data type that is a tuple of the two original subscribers.
+    func combineWith<T2>(_ other: ValueOnlySubscriber<T2>) -> ValueOnlySubscriber<(T,T2)> {
+        return ValueOnlySubscriber.combine(self, other)
+    }
+    
+    /// Combines three subscribers with different data types into one subscriber
+    /// with a data type that is a tuple of the three original subscribers.
+    static func combine<T2,T3>(
+        _ sub1: ValueOnlySubscriber<T>,
+        _ sub2: ValueOnlySubscriber<T2>,
+        _ sub3: ValueOnlySubscriber<T3>
+    ) -> ValueOnlySubscriber<(T,T2,T3)> {
+        // Combine 1 + (1 + 1)
+        return ValueOnlySubscriber.combine(
+            sub1,
+            sub2.combineWith(sub3)
+        )
+        .map {
+            ($0.0, $0.1.0, $0.1.1)
         }
     }
     
-    func cancel() {
-        lockQueue.async { [weak self] in
-            self?.isCancelled = true
-            self?.valueCallbacks.removeAll()
-            self?.executeCancelCallbacks()
-            self?.cancelCallbacks.removeAll()
+    /// Instance method for static `Subscriber.combine(_:_:_:)`
+    ///
+    /// Combines three subscribers with different data types into one subscriber
+    /// with a data type that is a tuple of the three original subscribers.
+    func combineWith<T2,T3>(_ other1: ValueOnlySubscriber<T2>, _ other2: ValueOnlySubscriber<T3>) -> ValueOnlySubscriber<(T,T2,T3)> {
+        return ValueOnlySubscriber.combine(self, other1, other2)
+    }
+    
+    /// Combines four subscribers with different data types into one subscriber
+    /// with a data type that is a tuple of the three original subscribers.
+    static func combine<T2,T3,T4>(
+        _ sub1: ValueOnlySubscriber<T>,
+        _ sub2: ValueOnlySubscriber<T2>,
+        _ sub3: ValueOnlySubscriber<T3>,
+        _ sub4: ValueOnlySubscriber<T4>
+    ) -> ValueOnlySubscriber<(T,T2,T3,T4)> {
+        // Combine (1 + 1) + (1 + 1)
+        return ValueOnlySubscriber<(T,T2)>.combine(
+            sub1.combineWith(sub2),
+            sub3.combineWith(sub4)
+        )
+        .map {
+            ($0.0.0, $0.0.1, $0.1.0, $0.1.1)
         }
+    }
+    
+    /// Instance method for static `Subscriber.combine(_:_:_:_:)`
+    ///
+    /// Combines four subscribers with different data types into one subscriber
+    /// with a data type that is a tuple of the three original subscribers.
+    func combineWith<T2,T3,T4>(
+        _ other1: ValueOnlySubscriber<T2>,
+        _ other2: ValueOnlySubscriber<T3>,
+        _ other3: ValueOnlySubscriber<T4>
+    ) -> ValueOnlySubscriber<(T,T2,T3,T4)> {
+        return ValueOnlySubscriber.combine(self, other1, other2, other3)
+    }
+    
+    /// Combines five subscribers with different data types into one subscriber
+    /// with a data type that is a tuple of the three original subscribers.
+    static func combine<T2,T3,T4,T5>(
+        _ sub1: ValueOnlySubscriber<T>,
+        _ sub2: ValueOnlySubscriber<T2>,
+        _ sub3: ValueOnlySubscriber<T3>,
+        _ sub4: ValueOnlySubscriber<T4>,
+        _ sub5: ValueOnlySubscriber<T5>
+    ) -> ValueOnlySubscriber<(T,T2,T3,T4,T5)> {
+        // Combine (1 + 1) + (1 + 1 + 1)
+        return ValueOnlySubscriber<(T,T2)>.combine(
+            sub1.combineWith(sub2),
+            sub3.combineWith(sub4, sub5)
+        )
+        .map {
+            ($0.0.0, $0.0.1, $0.1.0, $0.1.1, $0.1.2)
+        }
+    }
+    
+    /// Instance method for static `Subscriber.combine(_:_:_:_:_:)`
+    ///
+    /// Combines five subscribers with different data types into one subscriber
+    /// with a data type that is a tuple of the three original subscribers.
+    func combineWith<T2,T3,T4,T5>(
+        _ sub2: ValueOnlySubscriber<T2>,
+        _ sub3: ValueOnlySubscriber<T3>,
+        _ sub4: ValueOnlySubscriber<T4>,
+        _ sub5: ValueOnlySubscriber<T5>
+    ) -> ValueOnlySubscriber<(T,T2,T3,T4,T5)> {
+        return ValueOnlySubscriber.combine(self, sub2, sub3, sub4, sub5)
+    }
+    
+    /// Combines six subscribers with different data types into one subscriber
+    /// with a data type that is a tuple of the three original subscribers.
+    static func combine<T2,T3,T4,T5,T6>(
+        _ sub1: ValueOnlySubscriber<T>,
+        _ sub2: ValueOnlySubscriber<T2>,
+        _ sub3: ValueOnlySubscriber<T3>,
+        _ sub4: ValueOnlySubscriber<T4>,
+        _ sub5: ValueOnlySubscriber<T5>,
+        _ sub6: ValueOnlySubscriber<T6>
+    ) -> ValueOnlySubscriber<(T,T2,T3,T4,T5,T6)> {
+        // Combine (1 + 1 + 1) + (1 + 1 + 1)
+        return ValueOnlySubscriber<(T,T2,T3)>.combine(
+            sub1.combineWith(sub2, sub3),
+            sub4.combineWith(sub5, sub6)
+        )
+        .map {
+            ($0.0.0, $0.0.1, $0.0.2, $0.1.0, $0.1.1, $0.1.2)
+        }
+    }
+    
+    /// Instance method for static `Subscriber.combine(_:_:_:_:_:_:)`
+    ///
+    /// Combines six subscribers with different data types into one subscriber
+    /// with a data type that is a tuple of the three original subscribers.
+    func combineWith<T2,T3,T4,T5,T6>(
+        _ sub2: ValueOnlySubscriber<T2>,
+        _ sub3: ValueOnlySubscriber<T3>,
+        _ sub4: ValueOnlySubscriber<T4>,
+        _ sub5: ValueOnlySubscriber<T5>,
+        _ sub6: ValueOnlySubscriber<T6>
+    ) -> ValueOnlySubscriber<(T,T2,T3,T4,T5,T6)> {
+        return ValueOnlySubscriber.combine(self, sub2, sub3, sub4, sub5, sub6)
     }
     
 }
