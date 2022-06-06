@@ -26,6 +26,10 @@ public extension Subscriber {
         }
         
         return publisher.subscriber()
+            .onCancelled {
+                _ = sub1
+                _ = sub2
+            }
     }
     
     /// Instance method for static `Subscriber.combine(_:_:)`
