@@ -43,6 +43,7 @@ public class Subscriber<T, E: Error> {
     /// chaining of operators.
     @discardableResult public func subscribe(onQueue queue: DispatchQueue, performing callback: @escaping (State) -> Void) -> Self {
         guard !isCancelled else {
+            defer { callback(.cancelled) }
             return self
         }
         lockQueue.async { [weak self] in
