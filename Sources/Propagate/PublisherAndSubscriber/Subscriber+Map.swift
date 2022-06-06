@@ -11,7 +11,7 @@ public extension Subscriber {
     
     /// Using the supplied transform, maps the states received by this
     /// subscriber to states of a different type on a new subscriber.
-    func mapState<NewT, NewE: Error>(
+    func mapStates<NewT, NewE: Error>(
         _ transform: @escaping (StreamState<T,E>) -> StreamState<NewT, NewE>
     ) -> Subscriber<NewT, NewE> {
         let newPublisher = Publisher<NewT,NewE>()
@@ -38,7 +38,7 @@ public extension Subscriber {
     /// this subscriber to `.data` values of a different type on a new subscriber.
     /// Other states (`.error` and `.cancelled`) pass through like normal.
     func mapValues<NewT>(_ transform: @escaping (T) -> NewT) -> Subscriber<NewT, E> {
-        return mapState { [weak self] oldState in
+        return mapStates { [weak self] oldState in
             switch oldState {
             case .data(let data):
                 let transformed = transform(data)
@@ -62,7 +62,7 @@ public extension Subscriber {
     /// this subscriber to `.error` errors of a different type on a new subscriber.
     /// Other states (`.data` and `.cancelled`) pass through like normal.
     func mapErrors<NewE: Error>(_ transform: @escaping (E) -> NewE) -> Subscriber<T, NewE> {
-        return mapState { [weak self] oldState in
+        return mapStates { [weak self] oldState in
             switch oldState {
             case .data(let data):
                 return .data(data)
