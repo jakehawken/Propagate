@@ -17,14 +17,15 @@ public class Publisher<T, E: Error> {
     fileprivate var subscribers = WeakBag<Subscriber<T, E>>()
     private(set) public var isCancelled = false
     
+    internal var debugPair: (DebugPair)?
+    
     public init() {
-        safePrint("Created new publisher: \(self)", logType: .lifeCycle)
     }
     
     /// Emits a new `StreamState`. If this publisher has previously been
     /// cancelled, this method will be a no-op.
     internal func publishNewState(_ state: State) {
-        safePrint("Publishing state \(state) from \(self)", logType: .pubSub)
+        safePrint("Publishing state \(state) from \(self)", logType: .pubSub, debugPair: debugPair)
         lockQueue.async {
             if self.isCancelled {
                 return
@@ -34,7 +35,7 @@ public class Publisher<T, E: Error> {
     }
     
     deinit {
-        safePrint("Releasing \(self) from memory.", logType: .lifeCycle)
+        safePrint("Releasing \(self) from memory.", logType: .lifeCycle, debugPair: debugPair)
         // The asynchronous cancelAll() can't be called from deinit
         // because it results in a bad access crash.
         handleCancellation()
@@ -58,8 +59,14 @@ public class Publisher<T, E: Error> {
         lockQueue.async { [weak self] in
             self?.subscribers.insert(newSub)
         }
-        safePrint("Generating new subscriber: \(newSub) from \(self)", logType: .lifeCycle)
+        safePrint("Generating new subscriber: \(newSub) from \(self)", logType: .lifeCycle, debugPair: debugPair)
         return newSub
+    }
+    
+    @available(*, message: "This method is intended for debug use only. It is highly recommended that you not check in code calling this method.")
+    @discardableResult public func debug(logLevel: DebugLogLevel = .all, _ additionalMessage: String = "") -> Self {
+        self.debugPair = (logLevel, additionalMessage)
+        return self
     }
     
 }
@@ -122,7 +129,7 @@ public extension Publisher {
 private extension Publisher {
     
     func removeSubscriber(_ subscriber: Subscriber<T,E>) {
-        safePrint("Removing \(subscriber) from \(self)", logType: .pubSub)
+        safePrint("Removing \(subscriber) from \(self)", logType: .pubSub, debugPair: debugPair)
         self.subscribers.pruneIf { $0 === subscriber }
         subscriber.receive(.cancelled)
     }
@@ -133,9 +140,9 @@ private extension Publisher {
         }
         isCancelled = true
         let removedSubscribers = subscribers.removeAll()
-        safePrint("Removing subscribers: \(removedSubscribers)", logType: .pubSub)
+        safePrint("Removing subscribers: \(removedSubscribers)", logType: .pubSub, debugPair: debugPair)
         removedSubscribers.forEach {
-            safePrint("Sending cancellation signal to \($0)", logType: .pubSub)
+            safePrint("Sending cancellation signal to \($0)", logType: .pubSub, debugPair: debugPair)
             $0.receive(.cancelled)
         }
     }
@@ -221,8 +228,20 @@ public class StatefulPublisher<T,E: Error>: Publisher<T, E> {
         lockQueue.async { [weak self] in
             self?.subscribers.insert(newSub)
         }
-        safePrint("Generating new subscriber: \(newSub) from \(self)", logType: .lifeCycle)
+        safePrint(
+            "Generating new subscriber: \(newSub) from \(self)",
+            logType: .lifeCycle,
+            debugPair: debugPair
+        )
         return newSub
+    }
+    
+}
+
+public extension Publisher where T == Void {
+    
+    func kick() {
+        publish(())
     }
     
 }

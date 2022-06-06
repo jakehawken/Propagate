@@ -5,20 +5,11 @@
 
 import Foundation
 
-internal var debugLogLevel: DebugLogLevel = .none
-
-func safePrint(_ message: String, logType: LogType) {
-    guard logType.canBeShownAt(logLevel: debugLogLevel) else {
-        return
-    }
-    print("<>DEBUG: " + message)
-}
-
 internal func memoryAddressStringFor(_ obj: AnyObject) -> String {
     return "\(Unmanaged.passUnretained(obj).toOpaque())"
 }
 
-internal enum DebugLogLevel {
+public enum DebugLogLevel {
     case all
     case lifeCyclePlusPubSub
     case lifeCyclePlusOperators
@@ -26,6 +17,23 @@ internal enum DebugLogLevel {
     case pubSubOnly
     case lifeCycleOnly
     case none
+}
+
+typealias DebugPair = (logLevel: DebugLogLevel, message: String)
+
+internal func safePrint(_ message: String, logType: LogType, debugPair: DebugPair?) {
+    guard let pair = debugPair else {
+        return
+    }
+    guard logType.canBeShownAt(logLevel: pair.logLevel) else {
+        return
+    }
+    var output = "<>DEBUG: "
+    if pair.message.count > 0 {
+        output += "\"\(pair.message)\" - "
+    }
+    output += message
+    print(output)
 }
 
 internal enum LogType: Equatable {

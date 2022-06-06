@@ -19,6 +19,7 @@ public class Subscriber<T, E: Error> {
     private lazy var callbacks = SinglyLinkedList<ExecutionPair>(firstValue: (callbackQueue, { _ in }))
     
     private(set) public var isCancelled = false
+    internal var debugPair: DebugPair?
     
     internal init(canceller: Canceller<T,E>) {
         self.canceller = canceller
@@ -26,7 +27,11 @@ public class Subscriber<T, E: Error> {
     }
     
     deinit {
-        safePrint("Releasing \(self) from memory.", logType: .lifeCycle)
+        safePrint(
+            "Releasing \(self) from memory.",
+            logType: .lifeCycle,
+            debugPair: debugPair
+        )
         cancel()
     }
     
@@ -40,6 +45,12 @@ public class Subscriber<T, E: Error> {
         lockQueue.async { [weak self] in
             self?.callbacks.append((queue, callback))
         }
+        return self
+    }
+    
+    @available(*, message: "This method is intended for debug use only. It is highly recommended that you not check in code calling this method.")
+    @discardableResult public func debug(logLevel: DebugLogLevel = .all, _ additionalMessage: String = "") -> Self {
+        self.debugPair = (logLevel, additionalMessage)
         return self
     }
     
@@ -78,7 +89,11 @@ internal extension Subscriber {
 private extension Subscriber {
     
     func executeCallbacks(forState state: State) {
-        safePrint("\(self) received \(state)", logType: .pubSub)
+        safePrint(
+            "\(self) received \(state)",
+            logType: .pubSub,
+            debugPair: debugPair
+        )
         callbacks.forEach { (queue, action) in
             queue.async { action(state) }
         }

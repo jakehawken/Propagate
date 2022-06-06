@@ -25,7 +25,8 @@ public extension Subscriber {
         
         safePrint(
             "Mapping \(self) to \(newSubscriber)",
-            logType: .operators
+            logType: .operators,
+            debugPair: debugPair
         )
         return newSubscriber
             .onCancelled {
@@ -37,14 +38,17 @@ public extension Subscriber {
     /// this subscriber to `.data` values of a different type on a new subscriber.
     /// Other states (`.error` and `.cancelled`) pass through like normal.
     func mapValues<NewT>(_ transform: @escaping (T) -> NewT) -> Subscriber<NewT, E> {
-        return mapState { oldState in
+        return mapState { [weak self] oldState in
             switch oldState {
             case .data(let data):
                 let transformed = transform(data)
-                safePrint(
-                    "Mapped \(T.self)(\(oldState)) to \(NewT.self)(\(transformed))",
-                    logType: .operators
-                )
+                if let pair = self?.debugPair {
+                    safePrint(
+                        "Mapped \(T.self)(\(oldState)) to \(NewT.self)(\(transformed))",
+                        logType: .operators,
+                        debugPair: pair
+                    )
+                }
                 return .data(transformed)
             case .error(let error):
                 return .error(error)
@@ -58,16 +62,19 @@ public extension Subscriber {
     /// this subscriber to `.error` errors of a different type on a new subscriber.
     /// Other states (`.data` and `.cancelled`) pass through like normal.
     func mapErrors<NewE: Error>(_ transform: @escaping (E) -> NewE) -> Subscriber<T, NewE> {
-        return mapState { oldState in
+        return mapState { [weak self] oldState in
             switch oldState {
             case .data(let data):
                 return .data(data)
             case .error(let error):
                 let transformed = transform(error)
-                safePrint(
-                    "Mapped \(E.self)(\(oldState)) to \(NewE.self)(\(transformed))",
-                    logType: .operators
-                )
+                if let pair = self?.debugPair {
+                    safePrint(
+                        "Mapped \(E.self)(\(oldState)) to \(NewE.self)(\(transformed))",
+                        logType: .operators,
+                        debugPair: pair
+                    )
+                }
                 return .error(transformed)
             case .cancelled:
                 return .cancelled
