@@ -30,7 +30,7 @@ internal func safePrint(_ message: String, logType: LogType, debugPair: DebugPai
     }
     var output = "<>DEBUG: "
     if pair.message.count > 0 {
-        output += "\"\(pair.message)\" - "
+        output += "\(pair.message) - "
     }
     output += message
     print(output)
@@ -81,4 +81,25 @@ extension Subscriber: CustomStringConvertible {
         return "Subscriber<\(T.self),\(E.self)>(\(memoryAddressStringFor(self)))"
     }
     
+}
+
+// MARK: - interface
+
+public protocol PropagateDebuggable {
+    /// This method puts the type into a debug state where various events
+    /// (determined by the `DebugLogLevel`) are printed to the console.
+    ///
+    /// - Parameter logLevel: The log level to which the events need to be filtered.
+    /// e.g. if all you care about is creation and release from memory of the type,
+    /// you would call:
+    /// `.debug(logLevel: .lifeCycleOnly, "When is this being released?")`
+    ///
+    /// - Parameter additionalMessage: Any additional message you would like
+    /// included in the log, for example specific information about the given
+    /// type, e.g.
+    /// `.debug(logLevel: .operatorsOnly, "Mutations on the name stream.")`
+    ///
+    /// - returns: The type itself, as a `@discardableResult`, to allow for seamless chaining.
+    @available(*, message: "This method is intended for debug use only. It is highly recommended that you not check in code calling this method.")
+    @discardableResult func debug(logLevel: DebugLogLevel, _ additionalMessage: String) -> Self
 }

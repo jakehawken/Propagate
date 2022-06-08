@@ -25,7 +25,7 @@ public class Publisher<T, E: Error> {
     /// Emits a new `StreamState`. If this publisher has previously been
     /// cancelled, this method will be a no-op.
     internal func publishNewState(_ state: State) {
-        safePrint("Publishing state \(state) from \(self)", logType: .pubSub, debugPair: debugPair)
+        safePrint("Publishing state \(state). -- \(self)", logType: .pubSub, debugPair: debugPair)
         lockQueue.async {
             if self.isCancelled {
                 return
@@ -52,21 +52,14 @@ public class Publisher<T, E: Error> {
          Any changes made to this function's implementation will
          also need to be made to the same method on StatefulPublisher.
          */
-        let canceller = Canceller<T,E> { [weak self] in
+        let newSub = Subscriber(canceller: .init { [weak self] in
             self?.removeSubscriber($0)
-        }
-        let newSub = Subscriber(canceller: canceller)
+        })
         lockQueue.async { [weak self] in
             self?.subscribers.insert(newSub)
         }
         safePrint("Generating new subscriber: \(newSub) from \(self)", logType: .lifeCycle, debugPair: debugPair)
         return newSub
-    }
-    
-    @available(*, message: "This method is intended for debug use only. It is highly recommended that you not check in code calling this method.")
-    @discardableResult public func debug(logLevel: DebugLogLevel = .all, _ additionalMessage: String = "") -> Self {
-        self.debugPair = (logLevel, additionalMessage)
-        return self
     }
     
 }
@@ -120,6 +113,15 @@ public extension Publisher {
         lockQueue.async {
             self.handleCancellation()
         }
+    }
+    
+}
+
+extension Publisher: PropagateDebuggable {
+    
+    @discardableResult public func debug(logLevel: DebugLogLevel = .all, _ additionalMessage: String = "") -> Self {
+        self.debugPair = (logLevel, additionalMessage)
+        return self
     }
     
 }
@@ -217,19 +219,16 @@ public class StatefulPublisher<T,E: Error>: Publisher<T, E> {
          Any changes made to this function's implementation will
          also need to be made to the same method on Publisher.
          */
-        let canceller = Canceller<T,E> { [weak self] in
+        let newSub = OnSubscribeCallbackSubscriber(canceller: .init { [weak self] in
             self?.removeSubscriber($0)
-        }
-        
-        // These two lines should be the only difference between this and the super.
-        let newSub = OnSubscribeCallbackSubscriber(canceller: canceller)
+        })
         newSub.lastStateCallback = { [weak self] in self?.lastState }
         
         lockQueue.async { [weak self] in
             self?.subscribers.insert(newSub)
         }
         safePrint(
-            "Generating new subscriber: \(newSub) from \(self)",
+            "Generating new subscriber. -- \(self) --> \(newSub)",
             logType: .lifeCycle,
             debugPair: debugPair
         )

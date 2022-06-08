@@ -37,6 +37,7 @@ public class ValueOnlySubscriber<T> {
     private var valueCallbacks = [ValueExecutionPair]()
     private var cancelCallbacks = [CancelExecutionPair]()
     private(set) public var isCancelled = false
+    private var debugPair: DebugPair?
     
     fileprivate init() {}
     
@@ -70,16 +71,31 @@ public class ValueOnlySubscriber<T> {
         
         onNext { publisher.publish($0) }
         
+        safePrint(
+            "Inflating ValueOnlySubscriber<T\(T.self)> to \(Subscriber<T,E>.self)",
+            logType: .operators,
+            debugPair: debugPair
+        )
         return publisher.subscriber().onCancelled {
             _ = self // Capturing self to keep subscriber alive for easier chaining.
         }
     }
     
     deinit {
+        safePrint(
+            "Releasing \(self) from memory.",
+            logType: .lifeCycle,
+            debugPair: debugPair
+        )
         cancel()
     }
     
     private func executeValueCallbacks(with value: T) {
+        safePrint(
+            "Received \(value). -- \(self)",
+            logType: .lifeCycle,
+            debugPair: debugPair
+        )
         valueCallbacks.forEach { (queue, action) in
             queue.async { action(value) }
         }
@@ -92,12 +108,30 @@ public class ValueOnlySubscriber<T> {
     }
     
     private func cancel() {
+        safePrint(
+            "Cancelling \(self)...",
+            logType: .lifeCycle,
+            debugPair: debugPair
+        )
         lockQueue.async { [weak self] in
             self?.isCancelled = true
             self?.valueCallbacks.removeAll()
             self?.executeCancelCallbacks()
             self?.cancelCallbacks.removeAll()
         }
+    }
+    
+}
+
+extension ValueOnlySubscriber: PropagateDebuggable, CustomStringConvertible {
+    
+    @discardableResult public func debug(logLevel: DebugLogLevel = .all, _ additionalMessage: String = "") -> Self {
+        self.debugPair = (logLevel, additionalMessage)
+        return self
+    }
+    
+    public var description: String {
+        return "ValueOnlySubscriber<\(T.self)>(\(memoryAddressStringFor(self)))"
     }
     
 }
@@ -155,7 +189,34 @@ public extension ValueOnlySubscriber {
     /// Generates a new ValueOnlySubscriber of a different type, based on the supplied
     /// closure for mapping from one type to the other.
     @discardableResult func map<NewT>(mapping: @escaping (T) -> NewT) -> ValueOnlySubscriber<NewT> {
-        return ValueOnlySubscriber<NewT>(other: self, mapBlock: mapping)
+        let newSub = ValueOnlySubscriber<NewT>(other: self, mapBlock: mapping)
+        safePrint(
+            "Mapping from \(T.self) to \(NewT.self). -- \(self)",
+            logType: .operators,
+            debugPair: debugPair
+        )
+        return newSub
+    }
+    
+    /// Generates a new ValueOnlySubscriber of a different type, based on the supplied
+    /// closure for mapping from one type to the other.
+    @discardableResult func compactMap<NewT>(mapping: @escaping (T) -> NewT?) -> ValueOnlySubscriber<NewT> {
+        safePrint(
+            "Compact mapping from \(T.self) to \(NewT.self). -- \(self)",
+            logType: .operators,
+            debugPair: debugPair
+        )
+        
+        let newSub = ValueOnlySubscriber<NewT>()
+        onNext { value in
+            if let mappedValue = mapping(value) {
+                newSub.executeValueCallbacks(with: mappedValue)
+            }
+        }
+        onCancelled {
+            newSub.cancel()
+        }
+        return newSub
     }
     
     /// When T is an optional type, this function generates a new subscriber that only emits
@@ -166,25 +227,17 @@ public extension ValueOnlySubscriber {
     /// let optStrings = stringSubscriber.valueOnly() // of type ValueOnlySubscriber<String?>
     /// let strings = optString.compactMap()  // Will be of type ValueOnlySubscriber<String>
     /// ```
+    /// Such that if `optStrings` received `"cat", nil, "dog", nil, "banana"`, then `strings`
+    /// would receive `"cat", "dog", "banana"`.
     @discardableResult func filterNil<Wrapped>() -> ValueOnlySubscriber<Wrapped> where T == Wrapped? {
-        let new = ValueOnlySubscriber<Wrapped>()
-        
-        onNext { optionalValue in
-            if let unwrapped = optionalValue {
-                new.executeValueCallbacks(with: unwrapped)
-            }
-        }
-        onCancelled {
-            new.cancel()
-        }
-        
-        return new
+        return compactMap { $0 }
     }
     
 }
 
 public extension ValueOnlySubscriber where T: Equatable {
     
+    /// Only emits values that are not equal to the last emitted value.
     @discardableResult func distinctValues() -> ValueOnlySubscriber {
         let new = ValueOnlySubscriber<T>()
         
@@ -204,6 +257,11 @@ public extension ValueOnlySubscriber where T: Equatable {
             new.cancel()
         }
         
+        safePrint(
+            "Removing contiguous duplicates from \(self)",
+            logType: .operators,
+            debugPair: debugPair
+        )
         return new.onCancelled {
             _ = self
         }
@@ -233,6 +291,12 @@ public extension ValueOnlySubscriber {
                 new.executeValueCallbacks(with: tuple)
             }
         }
+        
+        safePrint(
+            "Combining ValueOnlySubscribers <\(T.self)> and <\(T2.self)>: -- \(memoryAddressStringFor(sub1)) & \(memoryAddressStringFor(sub2))",
+            logType: .operators,
+            debugPair: sub1.debugPair ?? sub2.debugPair // This will probably be a problem at some point.
+        )
         
         return new.onCancelled {
             _ = sub1

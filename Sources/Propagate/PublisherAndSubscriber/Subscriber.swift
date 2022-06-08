@@ -52,7 +52,10 @@ public class Subscriber<T, E: Error> {
         return self
     }
     
-    @available(*, message: "This method is intended for debug use only. It is highly recommended that you not check in code calling this method.")
+}
+
+extension Subscriber: PropagateDebuggable {
+    
     @discardableResult public func debug(logLevel: DebugLogLevel = .all, _ additionalMessage: String = "") -> Self {
         self.debugPair = (logLevel, additionalMessage)
         return self
@@ -82,6 +85,11 @@ internal extension Subscriber {
     /// its publisher. This will result in this subscriber
     /// immediately receiving a `.cancelled` signal.
     func cancel() {
+        safePrint(
+            "Cancelling \(self)...",
+            logType: .lifeCycle,
+            debugPair: debugPair
+        )
         canceller.cancel(for: self)
         receive(.cancelled)
     }
@@ -97,7 +105,7 @@ private extension Subscriber {
             return
         }
         safePrint(
-            "\(self) received \(state)",
+            "Received \(state). -- \(self)",
             logType: .pubSub,
             debugPair: debugPair
         )
