@@ -13,12 +13,13 @@ public extension Future {
      - returns: A future where the success value is an array of the success values from the array of promises, and the error
        is whichever error happened first.
     */
-    static func merge(_ futures: [Future<T, E>]) -> Future<[T], E> {
-        let promise = Promise<[T], E>()
+    static func merge(_ futures: [Future<T,E>]) -> Future<[T],E> {
+        let promise = Promise<[T],E>()
+        let queue = DispatchQueue(label: "\(Future<T,E>.self) Merge Queue")
         
         futures.forEach { future in
             future.finally { (_) in
-                promise.future.lockQueue.async {
+                queue.async {
                     guard promise.future.isComplete == false else {
                         return
                     }
