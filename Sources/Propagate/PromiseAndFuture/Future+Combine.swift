@@ -16,20 +16,18 @@ public extension Future {
     static func merge(_ futures: [Future<T, E>]) -> Future<[T], E> {
         let promise = Promise<[T], E>()
         
-        futures.forEach { future in
-            future.finally { (_) in
-                promise.future.lockQueue.async {
+        futures.forEach {
+            $0.finally { (_) in
+                promise.future.lockQueue.sync {
+                    let results = futures.compactMap { $0.result }
+                    let failures = results.compactMap { $0.failure }
+                    if let firstError = failures.first {
+                        promise.reject(firstError)
+                    }
                     guard promise.future.isComplete == false else {
                         return
                     }
-                    
-                    if let errorFuture = futures.first(where: { $0.failed }),
-                       let error = errorFuture.error {
-                        promise.reject(error)
-                        return
-                    }
-                    
-                    let successValues = futures.compactMap(\.value)
+                    let successValues = results.compactMap { $0.success }
                     guard successValues.count == futures.count else {
                         return
                     }
