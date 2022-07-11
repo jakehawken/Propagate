@@ -86,7 +86,7 @@ class PromiseTests: QuickSpec {
                 }
                 
                 it("should call the finally block no matter what") {
-                    expect(finallyHappened).to(beTrue())
+                    expect(finallyHappened).toEventually(beTrue())
                 }
             }
             
@@ -102,7 +102,7 @@ class PromiseTests: QuickSpec {
                 }
                 
                 it("should call the finally block no matter what") {
-                    expect(finallyHappened).to(beTrue())
+                    expect(finallyHappened).toEventually(beTrue())
                 }
             }
             
@@ -127,15 +127,15 @@ class PromiseTests: QuickSpec {
                 }
                 
                 it("should execute the then blocks in order") {
-                    expect(successValue).to(equal(5))
-                    expect(secondarySuccessValue).to(equal("5"))
-                    expect(secondaryTimeStamp?.isAfter(primaryTimestamp!)).to(beTrue())
-                    expect(tertiarySuccessValue).to(equal(5))
+                    expect(successValue).toEventually(equal(5))
+                    expect(secondarySuccessValue).toEventually(equal("5"))
+                    expect(secondaryTimeStamp?.isAfter(primaryTimestamp!)).toEventually(beTrue())
+                    expect(tertiarySuccessValue).toEventually(equal(5))
                     guard let tertiary = tertiaryTimeStamp, let secondary = secondaryTimeStamp else {
                         XCTFail("Both timestamps should be populated.")
                         return
                     }
-                    expect(tertiary.isAfter(secondary)).to(beTrue())
+                    expect(tertiary.isAfter(secondary)).toEventually(beTrue())
                 }
                 
             }
@@ -197,8 +197,8 @@ class PromiseTests: QuickSpec {
                 }
                 
                 it("should reject the second future") {
-                    expect(returnedFuture.failed).to(beTrue())
-                    expect(returnedFuture.error).to(equal(couldntGetIntError))
+                    expect(returnedFuture.failed).toEventually(beTrue())
+                    expect(returnedFuture.error).toEventually(equal(couldntGetIntError))
                 }
             }
             
@@ -208,9 +208,9 @@ class PromiseTests: QuickSpec {
                 }
                 
                 it("should resolve the returned future") {
-                    expect(returnedFuture.succeeded).to(beTrue())
-                    expect(returnedFuture.error).to(beNil())
-                    expect(returnedFuture.value).to(equal("3"))
+                    expect(returnedFuture.succeeded).toEventually(beTrue())
+                    expect(returnedFuture.error).toEventually(beNil())
+                    expect(returnedFuture.value).toEventually(equal("3"))
                 }
             }
         }
@@ -231,8 +231,8 @@ class PromiseTests: QuickSpec {
                 }
                 
                 it("should reject the second future") {
-                    expect(returnedFuture.failed).to(beTrue())
-                    expect(returnedFuture.error).to(equal(couldntGetIntError))
+                    expect(returnedFuture.failed).toEventually(beTrue())
+                    expect(returnedFuture.error).toEventually(equal(couldntGetIntError))
                 }
             }
             
@@ -242,9 +242,9 @@ class PromiseTests: QuickSpec {
                 }
                 
                 it("should resolve the returned future with the mapped success") {
-                    expect(returnedFuture.succeeded).to(beTrue())
-                    expect(returnedFuture.error).to(beNil())
-                    expect(returnedFuture.value).to(equal("3"))
+                    expect(returnedFuture.succeeded).toEventually(beTrue())
+                    expect(returnedFuture.error).toEventually(beNil())
+                    expect(returnedFuture.value).toEventually(equal("3"))
                 }
             }
         }
@@ -266,13 +266,13 @@ class PromiseTests: QuickSpec {
                 }
                 
                 it("should reject the second future with the mapped error") {
-                    expect(returnedFuture.failed).to(beTrue())
+                    expect(returnedFuture.failed).toEventually(beTrue())
                     guard let returnedError = returnedFuture.error else {
                         XCTFail("Error should not be nil.")
                         return
                     }
-                    expect(returnedError).to(equal(couldntGetIntError))
-                    expect(returnedError.message).to(equal("Yuh-oh!"))
+                    expect(returnedError).toEventually(equal(couldntGetIntError))
+                    expect(returnedError.message).toEventually(equal("Yuh-oh!"))
                 }
             }
             
@@ -282,9 +282,9 @@ class PromiseTests: QuickSpec {
                 }
                 
                 it("should resolve the returned future") {
-                    expect(returnedFuture.succeeded).to(beTrue())
-                    expect(returnedFuture.error).to(beNil())
-                    expect(returnedFuture.value).to(equal(3))
+                    expect(returnedFuture.succeeded).toEventually(beTrue())
+                    expect(returnedFuture.error).toEventually(beNil())
+                    expect(returnedFuture.value).toEventually(equal(3))
                 }
             }
         }
@@ -340,9 +340,9 @@ class PromiseTests: QuickSpec {
                 }
                 
                 it("should reject the future with the first error encountered") {
-                    expect(successValues).to(beNil())
-                    expect(future.failed).to(beTrue())
-                    expect(errorFromFuture).to(equal(specificError))
+                    expect(successValues).toEventually(beNil())
+                    expect(future.failed).toEventually(beTrue())
+                    expect(errorFromFuture).toEventually(equal(specificError))
                 }
             }
             
@@ -365,9 +365,9 @@ class PromiseTests: QuickSpec {
                 
                 it("should reject the future with the first error encountered") {
                     expect(successValues).to(beNil())
-                    expect(future.failed).to(beTrue())
+                    expect(future.failed).toEventually(beTrue())
                     expect(errorFromFuture).toEventuallyNot(beNil())
-                    expect(errorFromFuture).to(equal(genericError))
+                    expect(errorFromFuture).toEventually(equal(genericError))
                 }
             }
         }
@@ -395,9 +395,9 @@ class PromiseTests: QuickSpec {
                 }
                 
                 it("should resolve the joined future with the first value") {
-                    expect(joinedFuture.isComplete).to(beTrue())
-                    expect(joinedFuture.succeeded).to(beTrue())
-                    expect(joinedFuture.value).to(equal(1))
+                    expect(joinedFuture.isComplete).toEventually(beTrue())
+                    expect(joinedFuture.succeeded).toEventually(beTrue())
+                    expect(joinedFuture.value).toEventually(equal(1))
                 }
             }
             
@@ -409,9 +409,9 @@ class PromiseTests: QuickSpec {
                 }
                 
                 it("should resolve the joined future with the second value") {
-                    expect(joinedFuture.isComplete).to(beTrue())
-                    expect(joinedFuture.succeeded).to(beTrue())
-                    expect(joinedFuture.value).to(equal(2))
+                    expect(joinedFuture.isComplete).toEventually(beTrue())
+                    expect(joinedFuture.succeeded).toEventually(beTrue())
+                    expect(joinedFuture.value).toEventually(equal(2))
                 }
             }
             
@@ -423,9 +423,9 @@ class PromiseTests: QuickSpec {
                 }
                 
                 it("should resolve the joined future with the third value") {
-                    expect(joinedFuture.isComplete).to(beTrue())
-                    expect(joinedFuture.succeeded).to(beTrue())
-                    expect(joinedFuture.value).to(equal(3))
+                    expect(joinedFuture.isComplete).toEventually(beTrue())
+                    expect(joinedFuture.succeeded).toEventually(beTrue())
+                    expect(joinedFuture.value).toEventually(equal(3))
                 }
             }
         }

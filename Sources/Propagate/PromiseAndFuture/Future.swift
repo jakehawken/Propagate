@@ -10,14 +10,16 @@ import Foundation
 public class Future<T, E: Error> {
     public typealias SuccessBlock  = (T) -> Void
     public typealias ErrorBlock = (E) -> Void
+    public typealias FinallyBlock = (Result<T,E>) -> Void
 
-    private var successBlock: SuccessBlock?
-    private var errorBlock: ErrorBlock?
-    private var finallyBlock: ((Result<T, E>) -> Void)?
+    private var successCallbackPair: (action: SuccessBlock, queue: DispatchQueue)?
+    private var errorCallbackPair: (action: ErrorBlock, queue: DispatchQueue)?
+    private var finallyCallbackPair: (action: FinallyBlock, queue: DispatchQueue)?
     private var childFuture: Future?
-    internal var result: Result<T, E>?
+    internal var result: Result<T,E>?
     
-    internal let lockQueue = DispatchQueue(label: "com.jakehawken.jsync.future.\(NSUUID().uuidString)")
+    internal let lockQueue = DispatchQueue(label: "com.jakehawken.propagate.future.lock.\(NSUUID().uuidString)")
+    internal let callbackQueue = DispatchQueue(label: "com.jakehawken.propagate.future.callback.\(NSUUID().uuidString)")
 
     // MARK: - PUBLIC -
     
@@ -69,18 +71,19 @@ public class Future<T, E: Error> {
     /**
     Adds a block to be executed when and if the future is resolved with a success value. Can be called multiple times to add multiple blocks. Note: Blocks will execute serially, in the order in which they were added.
     
+    - Parameter onQueue: An optional queue on which to execute the callback. A non-nil value will override the default behavior. Defaults to nil.
     - Parameter callback: The block to be executed on success. Block takes a single argument, which is of the success type of the future.
     - returns: The future iself, as a `@discardableResult` to allow for chaining of callback methods.
     */
-    @discardableResult public func onSuccess(_ callback: @escaping SuccessBlock) -> Future<T, E> {
+    @discardableResult public func onSuccess(onQueue overrideQueue: DispatchQueue? = nil, _ callback: @escaping SuccessBlock) -> Future<T, E> {
         if let value = value { //If the future has already been resolved with a value. Call the block immediately.
             callback(value)
         }
-        else if successBlock == nil {
-            successBlock = callback
+        else if successCallbackPair == nil {
+            successCallbackPair = (callback, overrideQueue ?? callbackQueue)
         }
-        else if let child = childFuture, child.successBlock == nil {
-            child.successBlock = callback
+        else if let child = childFuture {
+            child.onSuccess(onQueue: overrideQueue, callback)
         }
         else {
             self.appendChild().onSuccess(callback)
@@ -91,21 +94,22 @@ public class Future<T, E: Error> {
     /**
     Adds a block to be executed when and if the future is rejected with an error. Can be called multiple times to add multiple blocks. Note: Blocks will execute serially, in the order in which they were added.
     
-    - Parameter callback: The block to be executed on failure. Block takes a single argument, which is of the error type of the future.
+     - Parameter onQueue: An optional queue on which to execute the callback. A non-nil value will override the default behavior. Defaults to nil.
+     - Parameter callback: The block to be executed on failure. Block takes a single argument, which is of the error type of the future.
     - returns: The future iself, as a `@discardableResult` to allow for chaining of callback methods.
     */
-    @discardableResult public func onFailure(_ callback: @escaping ErrorBlock) -> Future<T, E> {
+    @discardableResult public func onFailure(onQueue overrideQueue: DispatchQueue? = nil, _ callback: @escaping ErrorBlock) -> Future<T, E> {
         if let error = self.error { //If the future has already been rejected with an error. Call the block immediately.
             callback(error)
         }
-        else if self.errorBlock == nil {
-            self.errorBlock = callback
+        else if self.errorCallbackPair == nil {
+            self.errorCallbackPair = (callback, overrideQueue ?? callbackQueue)
         }
-        else if let child = childFuture, child.errorBlock == nil {
-            child.errorBlock = callback
+        else if let child = childFuture {
+            child.onFailure(onQueue: overrideQueue, callback)
         }
         else {
-            self.appendChild().onFailure(callback)
+            self.appendChild().onFailure(onQueue: overrideQueue, callback)
         }
         return self
     }
@@ -113,21 +117,22 @@ public class Future<T, E: Error> {
     /**
     Adds a block to be executed when and if the future completes, regardless of success/failure state. Can be called multiple times to add multiple blocks. Note: Blocks will execute serially, in the order in which they were added.
     
-    - Parameter callback: The block to be executed on completion. Block takes a single argument, which is a `Result<T,E>`.
+     - Parameter onQueue: An optional queue on which to execute the callback. A non-nil value will override the default behavior. Defaults to nil.
+     - Parameter callback: The block to be executed on completion. Block takes a single argument, which is a `Result<T,E>`.
     - returns: The future iself, as a `@discardableResult` to allow for chaining of callback methods.
     */
-    @discardableResult public func finally(_ callback: @escaping (Result<T, E>) -> Void) -> Future<T, E> {
+    @discardableResult public func finally(onQueue overrideQueue: DispatchQueue? = nil, _ callback: @escaping (Result<T, E>) -> Void) -> Future<T, E> {
         if let result = result {
             callback(result)
         }
-        else if finallyBlock == nil {
-            finallyBlock = callback
+        else if finallyCallbackPair == nil {
+            finallyCallbackPair = (callback, overrideQueue ?? callbackQueue)
         }
-        else if let child = childFuture, child.finallyBlock == nil {
-            child.finallyBlock = callback
+        else if let child = childFuture {
+            child.finally(onQueue: overrideQueue, callback)
         }
         else {
-            appendChild().finally(callback)
+            appendChild().finally(onQueue: overrideQueue, callback)
         }
         return self
     }
@@ -139,23 +144,21 @@ internal extension Future {
         guard !isComplete else {
             return
         }
+        self.result = .success(val)
         
-        let result: Result<T, E> = .success(val)
-        self.result = result
-        
-        if let success = successBlock {
-            lockQueue.sync {
-                success(val)
+        if let success = successCallbackPair {
+            success.queue.async {
+                success.action(val)
             }
         }
         if let child = childFuture {
-            lockQueue.sync {
+            lockQueue.async {
                 child.resolve(val)
             }
         }
-        if let finally = finallyBlock {
-            lockQueue.sync {
-                finally(result)
+        if let finally = finallyCallbackPair {
+            finally.queue.async {
+                finally.action(.success(val))
             }
         }
     }
@@ -168,19 +171,19 @@ internal extension Future {
         let result: Result<T, E> = .failure(err)
         self.result = result
         
-        if let errBlock = errorBlock {
-            lockQueue.sync {
-                errBlock(err)
+        if let errPair = errorCallbackPair {
+            errPair.queue.async {
+                errPair.action(err)
             }
         }
         if let child = childFuture {
-            lockQueue.sync {
+            lockQueue.async {
                 child.reject(err)
             }
         }
-        if let finally = finallyBlock {
-            lockQueue.sync {
-                finally(result)
+        if let finally = finallyCallbackPair {
+            finally.queue.async {
+                finally.action(result)
             }
         }
     }
