@@ -144,17 +144,17 @@ internal extension Future {
         self.result = result
         
         if let success = successBlock {
-            lockQueue.async {
+            lockQueue.sync {
                 success(val)
             }
         }
         if let child = childFuture {
-            lockQueue.async {
+            lockQueue.sync {
                 child.resolve(val)
             }
         }
         if let finally = finallyBlock {
-            lockQueue.async {
+            lockQueue.sync {
                 finally(result)
             }
         }
@@ -169,17 +169,17 @@ internal extension Future {
         self.result = result
         
         if let errBlock = errorBlock {
-            lockQueue.async {
+            lockQueue.sync {
                 errBlock(err)
             }
         }
         if let child = childFuture {
-            lockQueue.async {
+            lockQueue.sync {
                 child.reject(err)
             }
         }
         if let finally = finallyBlock {
-            lockQueue.async {
+            lockQueue.sync {
                 finally(result)
             }
         }
