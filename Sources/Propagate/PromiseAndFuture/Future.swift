@@ -89,7 +89,7 @@ public class Future<T, E: Error> {
             child.onSuccess(onQueue: overrideQueue, callback)
         }
         else {
-            self.appendChild().onSuccess(callback)
+            self.appendChild().onSuccess(onQueue: overrideQueue, callback)
         }
         return self
     }
