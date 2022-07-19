@@ -76,11 +76,14 @@ public class Future<T, E: Error> {
     - returns: The future iself, as a `@discardableResult` to allow for chaining of callback methods.
     */
     @discardableResult public func onSuccess(onQueue overrideQueue: DispatchQueue? = nil, _ callback: @escaping SuccessBlock) -> Future<T, E> {
+        let queueForCallback = overrideQueue ?? callbackQueue
         if let value = value { //If the future has already been resolved with a value. Call the block immediately.
-            callback(value)
+            queueForCallback.async {
+                callback(value)
+            }
         }
         else if successCallbackPair == nil {
-            successCallbackPair = (callback, overrideQueue ?? callbackQueue)
+            successCallbackPair = (callback, queueForCallback)
         }
         else if let child = childFuture {
             child.onSuccess(onQueue: overrideQueue, callback)
@@ -99,11 +102,14 @@ public class Future<T, E: Error> {
     - returns: The future iself, as a `@discardableResult` to allow for chaining of callback methods.
     */
     @discardableResult public func onFailure(onQueue overrideQueue: DispatchQueue? = nil, _ callback: @escaping ErrorBlock) -> Future<T, E> {
+        let queueForCallback = overrideQueue ?? callbackQueue
         if let error = self.error { //If the future has already been rejected with an error. Call the block immediately.
-            callback(error)
+            queueForCallback.async {
+                callback(error)
+            }
         }
         else if self.errorCallbackPair == nil {
-            self.errorCallbackPair = (callback, overrideQueue ?? callbackQueue)
+            self.errorCallbackPair = (callback, queueForCallback)
         }
         else if let child = childFuture {
             child.onFailure(onQueue: overrideQueue, callback)
@@ -122,11 +128,14 @@ public class Future<T, E: Error> {
     - returns: The future iself, as a `@discardableResult` to allow for chaining of callback methods.
     */
     @discardableResult public func finally(onQueue overrideQueue: DispatchQueue? = nil, _ callback: @escaping (Result<T, E>) -> Void) -> Future<T, E> {
+        let queueForCallback = overrideQueue ?? callbackQueue
         if let result = result {
-            callback(result)
+            queueForCallback.async {
+                callback(result)
+            }
         }
         else if finallyCallbackPair == nil {
-            finallyCallbackPair = (callback, overrideQueue ?? callbackQueue)
+            finallyCallbackPair = (callback, queueForCallback)
         }
         else if let child = childFuture {
             child.finally(onQueue: overrideQueue, callback)
