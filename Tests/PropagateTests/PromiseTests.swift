@@ -4,10 +4,8 @@ import Nimble
 import Quick
 import XCTest
 
-// swiftlint:disable file_length
-// swiftlint:disable:next type_body_length
 class PromiseTests: QuickSpec {
-  // swiftlint:disable:next function_body_length
+    
   override func spec() {
 
     var subject: Promise<Int,NSError>!

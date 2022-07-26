@@ -17,7 +17,7 @@ public class Publisher<T, E: Error> {
     fileprivate var subscribers = WeakBag<Subscriber<T, E>>()
     private(set) public var isCancelled = false
     
-    internal var debugPair: (DebugPair)?
+    internal var loggingCombo: (LoggingCombo)?
     
     public init() {
     }
@@ -25,7 +25,7 @@ public class Publisher<T, E: Error> {
     /// Emits a new `StreamState`. If this publisher has previously been
     /// cancelled, this method will be a no-op.
     internal func publishNewState(_ state: State) {
-        safePrint("Publishing state \(state). -- \(self)", logType: .pubSub, debugPair: debugPair)
+        safePrint("Publishing state \(state). -- \(self)", logType: .pubSub, loggingCombo: loggingCombo)
         lockQueue.async {
             if self.isCancelled {
                 return
@@ -35,7 +35,7 @@ public class Publisher<T, E: Error> {
     }
     
     deinit {
-        safePrint("Releasing \(self) from memory.", logType: .lifeCycle, debugPair: debugPair)
+        safePrint("Releasing \(self) from memory.", logType: .lifeCycle, loggingCombo: loggingCombo)
         // The asynchronous cancelAll() can't be called from deinit
         // because it results in a bad access crash.
         handleCancellation()
@@ -58,7 +58,7 @@ public class Publisher<T, E: Error> {
         lockQueue.async { [weak self] in
             self?.subscribers.insert(newSub)
         }
-        safePrint("Generating new subscriber: \(newSub) from \(self)", logType: .lifeCycle, debugPair: debugPair)
+        safePrint("Generating new subscriber: \(newSub) from \(self)", logType: .lifeCycle, loggingCombo: loggingCombo)
         return newSub
     }
     
@@ -119,8 +119,12 @@ public extension Publisher {
 
 extension Publisher: PropagateDebuggable {
     
-    @discardableResult public func debug(logLevel: DebugLogLevel = .all, _ additionalMessage: String = "") -> Self {
-        self.debugPair = (logLevel, additionalMessage)
+    @discardableResult public func enableLogging(
+        logLevel: DebugLogLevel = .all,
+        _ additionalMessage: String = "",
+        _ logMethod: LoggingMethod = .debugPrint
+    ) -> Self {
+        self.loggingCombo = (logLevel, additionalMessage, logMethod)
         return self
     }
     
@@ -131,7 +135,7 @@ extension Publisher: PropagateDebuggable {
 private extension Publisher {
     
     func removeSubscriber(_ subscriber: Subscriber<T,E>) {
-        safePrint("Removing \(subscriber) from \(self)", logType: .pubSub, debugPair: debugPair)
+        safePrint("Removing \(subscriber) from \(self)", logType: .pubSub, loggingCombo: loggingCombo)
         self.subscribers.pruneIf { $0 === subscriber }
         subscriber.receive(.cancelled)
     }
@@ -142,9 +146,9 @@ private extension Publisher {
         }
         isCancelled = true
         let removedSubscribers = subscribers.removeAll()
-        safePrint("Removing subscribers: \(removedSubscribers)", logType: .pubSub, debugPair: debugPair)
+        safePrint("Removing subscribers: \(removedSubscribers)", logType: .pubSub, loggingCombo: loggingCombo)
         removedSubscribers.forEach {
-            safePrint("Sending cancellation signal to \($0)", logType: .pubSub, debugPair: debugPair)
+            safePrint("Sending cancellation signal to \($0)", logType: .pubSub, loggingCombo: loggingCombo)
             $0.receive(.cancelled)
         }
     }
@@ -230,7 +234,7 @@ public class StatefulPublisher<T,E: Error>: Publisher<T, E> {
         safePrint(
             "Generating new subscriber. -- \(self) --> \(newSub)",
             logType: .lifeCycle,
-            debugPair: debugPair
+            loggingCombo: loggingCombo
         )
         return newSub
     }

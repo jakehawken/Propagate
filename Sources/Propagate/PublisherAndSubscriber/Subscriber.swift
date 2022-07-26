@@ -19,7 +19,7 @@ public class Subscriber<T, E: Error> {
     private lazy var callbacks = SinglyLinkedList<ExecutionPair>(firstValue: (callbackQueue, { _ in }))
     
     private(set) public var isCancelled = false
-    internal var debugPair: DebugPair?
+    internal var loggingCombo: LoggingCombo?
     
     internal init(canceller: Canceller<T,E>) {
         self.canceller = canceller
@@ -30,7 +30,7 @@ public class Subscriber<T, E: Error> {
         safePrint(
             "Releasing \(self) from memory.",
             logType: .lifeCycle,
-            debugPair: debugPair
+            loggingCombo: loggingCombo
         )
         cancel()
     }
@@ -56,8 +56,12 @@ public class Subscriber<T, E: Error> {
 
 extension Subscriber: PropagateDebuggable {
     
-    @discardableResult public func debug(logLevel: DebugLogLevel = .all, _ additionalMessage: String = "") -> Self {
-        self.debugPair = (logLevel, additionalMessage)
+    @discardableResult public func enableLogging(
+        logLevel: DebugLogLevel = .all,
+        _ additionalMessage: String = "",
+        _ logMethod: LoggingMethod = .debugPrint
+    ) -> Self {
+        self.loggingCombo = (logLevel, additionalMessage, logMethod)
         return self
     }
     
@@ -88,7 +92,7 @@ internal extension Subscriber {
         safePrint(
             "Cancelling \(self)...",
             logType: .lifeCycle,
-            debugPair: debugPair
+            loggingCombo: loggingCombo
         )
         canceller.cancel(for: self)
         receive(.cancelled)
@@ -107,7 +111,7 @@ private extension Subscriber {
         safePrint(
             "Received \(state). -- \(self)",
             logType: .pubSub,
-            debugPair: debugPair
+            loggingCombo: loggingCombo
         )
         callbacks.forEach { (queue, action) in
             queue.async { action(state) }

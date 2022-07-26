@@ -26,7 +26,7 @@ public extension Subscriber {
         safePrint(
             "Mapping states from StreamState<\(T.self),\(E.self)> to StreamState<\(NewT.self),\(NewE.self)>",
             logType: .operators,
-            debugPair: debugPair
+            loggingCombo: loggingCombo
         )
         return newSubscriber
             .onCancelled {
@@ -41,7 +41,7 @@ public extension Subscriber {
         safePrint(
             "Mapping values from \(T.self) to \(NewT.self)",
             logType: .operators,
-            debugPair: debugPair
+            loggingCombo: loggingCombo
         )
         return mapStates { oldState in
             switch oldState {
@@ -77,7 +77,7 @@ public extension Subscriber {
         safePrint(
             "Mapping errors from \(E.self) to \(NewE.self).",
             logType: .operators,
-            debugPair: debugPair
+            loggingCombo: loggingCombo
         )
         return mapStates { oldState in
             switch oldState {

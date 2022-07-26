@@ -19,21 +19,36 @@ public enum DebugLogLevel {
     case none
 }
 
-typealias DebugPair = (logLevel: DebugLogLevel, message: String)
+public typealias LoggingHook = (String) -> Void
+typealias LoggingCombo = (logLevel: DebugLogLevel, message: String, loggingMethod: LoggingMethod?)
 
-internal func safePrint(_ message: String, logType: LogType, debugPair: DebugPair?) {
-    guard let pair = debugPair else {
+public enum LoggingMethod {
+    
+    case external(LoggingHook)
+    
+    @available(*, deprecated, message: "This logging method is intended for debug use only. It is highly recommended that you not check in code using .")
+    case debugPrint
+}
+
+internal func safePrint(_ message: String, logType: LogType, loggingCombo: LoggingCombo?) {
+    guard let combo = loggingCombo else {
         return
     }
-    guard logType.canBeShownAt(logLevel: pair.logLevel) else {
+    guard logType.canBeShownAt(logLevel: combo.logLevel) else {
         return
     }
-    var output = "<>DEBUG: "
-    if pair.message.count > 0 {
-        output += "\(pair.message) - "
+    var output = "<>PROPAGATE: "
+    if combo.message.count > 0 {
+        output += "\(combo.message) - "
     }
     output += message
-    print(output)
+    
+    switch loggingCombo?.loggingMethod {
+    case .debugPrint, nil:
+        print(output)
+    case .external(let hook):
+        hook(output)
+    }
 }
 
 internal enum LogType: Equatable {
@@ -100,6 +115,9 @@ public protocol PropagateDebuggable {
     /// `.debug(logLevel: .operatorsOnly, "Mutations on the name stream.")`
     ///
     /// - returns: The type itself, as a `@discardableResult`, to allow for seamless chaining.
-    @available(*, message: "This method is intended for debug use only. It is highly recommended that you not check in code calling this method.")
-    @discardableResult func debug(logLevel: DebugLogLevel, _ additionalMessage: String) -> Self
+    @discardableResult func enableLogging(
+        logLevel: DebugLogLevel,
+        _ additionalMessage: String,
+        _ logMethod: LoggingMethod
+    ) -> Self
 }
