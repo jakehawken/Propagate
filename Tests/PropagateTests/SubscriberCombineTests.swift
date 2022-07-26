@@ -1,5 +1,5 @@
 //  SubscriberCombineTests.swift
-//  Propagate
+//  PropagateTests
 //  Created by Jacob Hawken on 5/6/22.
 
 import Propagate
@@ -16,11 +16,6 @@ class SubscriberCombineTests: XCTestCase {
     }
 
     override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
 
-}
-
-private enum TestError: Error {
-    case case1
 }

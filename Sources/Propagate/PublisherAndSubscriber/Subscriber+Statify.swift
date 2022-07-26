@@ -9,12 +9,16 @@ public extension Subscriber {
     /// Generates a new subscriber that synchronously
     /// emits the last state (if any) when subscribed to.
     func stateful() -> Subscriber<T,E> {
-        let publisher = StatefulPublisher<T,E>()
-        
-        subscribe { state in
-            publisher.publishNewState(state)
-        }
-        
+        boundStatefulPublisher()
+            .subscriber()
+            .onCancelled {
+                _ = self // Capturing self to keep subscriber alive for easier chaining.
+            }
+    }
+    
+    func startWith(_ value: T) -> Subscriber<T,E> {
+        let publisher = boundStatefulPublisher()
+        publisher.publish(value)
         return publisher.subscriber()
             .onCancelled {
                 _ = self // Capturing self to keep subscriber alive for easier chaining.
@@ -111,6 +115,16 @@ class ScanState<T,E: Error> {
             return nil
         }
         return values.suffix(scanSize)
+    }
+    
+}
+
+private extension Subscriber {
+    
+    func boundStatefulPublisher() -> StatefulPublisher<T,E> {
+        let publisher = StatefulPublisher<T,E>()
+        bindTo(publisher)
+        return publisher
     }
     
 }

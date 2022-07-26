@@ -37,7 +37,7 @@ public class ValueOnlySubscriber<T> {
     private var valueCallbacks = [ValueExecutionPair]()
     private var cancelCallbacks = [CancelExecutionPair]()
     private(set) public var isCancelled = false
-    private var debugPair: DebugPair?
+    private var loggingCombo: LoggingCombo?
     
     fileprivate init() {}
     
@@ -74,7 +74,7 @@ public class ValueOnlySubscriber<T> {
         safePrint(
             "Inflating ValueOnlySubscriber<T\(T.self)> to \(Subscriber<T,E>.self)",
             logType: .operators,
-            debugPair: debugPair
+            loggingCombo: loggingCombo
         )
         return publisher.subscriber().onCancelled {
             _ = self // Capturing self to keep subscriber alive for easier chaining.
@@ -85,7 +85,7 @@ public class ValueOnlySubscriber<T> {
         safePrint(
             "Releasing \(self) from memory.",
             logType: .lifeCycle,
-            debugPair: debugPair
+            loggingCombo: loggingCombo
         )
         cancel()
     }
@@ -94,7 +94,7 @@ public class ValueOnlySubscriber<T> {
         safePrint(
             "Received \(value). -- \(self)",
             logType: .lifeCycle,
-            debugPair: debugPair
+            loggingCombo: loggingCombo
         )
         valueCallbacks.forEach { (queue, action) in
             queue.async { action(value) }
@@ -111,7 +111,7 @@ public class ValueOnlySubscriber<T> {
         safePrint(
             "Cancelling \(self)...",
             logType: .lifeCycle,
-            debugPair: debugPair
+            loggingCombo: loggingCombo
         )
         lockQueue.async { [weak self] in
             self?.isCancelled = true
@@ -125,8 +125,12 @@ public class ValueOnlySubscriber<T> {
 
 extension ValueOnlySubscriber: PropagateDebuggable, CustomStringConvertible {
     
-    @discardableResult public func debug(logLevel: DebugLogLevel = .all, _ additionalMessage: String = "") -> Self {
-        self.debugPair = (logLevel, additionalMessage)
+    @discardableResult public func enableLogging(
+        logLevel: DebugLogLevel = .all,
+        _ additionalMessage: String = "",
+        _ logMethod: LoggingMethod = .debugPrint
+    ) -> Self {
+        self.loggingCombo = (logLevel, additionalMessage, logMethod)
         return self
     }
     
@@ -193,7 +197,7 @@ public extension ValueOnlySubscriber {
         safePrint(
             "Mapping from \(T.self) to \(NewT.self). -- \(self)",
             logType: .operators,
-            debugPair: debugPair
+            loggingCombo: loggingCombo
         )
         return newSub
     }
@@ -204,7 +208,7 @@ public extension ValueOnlySubscriber {
         safePrint(
             "Compact mapping from \(T.self) to \(NewT.self). -- \(self)",
             logType: .operators,
-            debugPair: debugPair
+            loggingCombo: loggingCombo
         )
         
         let newSub = ValueOnlySubscriber<NewT>()
@@ -260,7 +264,7 @@ public extension ValueOnlySubscriber where T: Equatable {
         safePrint(
             "Removing contiguous duplicates from \(self)",
             logType: .operators,
-            debugPair: debugPair
+            loggingCombo: loggingCombo
         )
         return new.onCancelled {
             _ = self
@@ -295,7 +299,7 @@ public extension ValueOnlySubscriber {
         safePrint(
             "Combining ValueOnlySubscribers <\(T.self)> and <\(T2.self)>: -- \(memoryAddressStringFor(sub1)) & \(memoryAddressStringFor(sub2))",
             logType: .operators,
-            debugPair: sub1.debugPair ?? sub2.debugPair // This will probably be a problem at some point.
+            loggingCombo: sub1.loggingCombo ?? sub2.loggingCombo // This will probably be a problem at some point.
         )
         
         return new.onCancelled {

@@ -22,7 +22,7 @@ public extension Subscriber {
         safePrint(
             "Filtering \(self)",
             logType: .operators,
-            debugPair: debugPair
+            loggingCombo: loggingCombo
         )
         
         return publisher.subscriber()
@@ -97,7 +97,7 @@ public extension Subscriber where T: Equatable {
         safePrint(
             "Removing contiguous duplicates values from \(self).",
             logType: .operators,
-            debugPair: debugPair
+            loggingCombo: loggingCombo
         )
         return publisher.subscriber()
             .onCancelled {
@@ -137,7 +137,7 @@ public extension Subscriber where T: Equatable, E: Equatable {
         safePrint(
             "Removing contiguous duplicates values from \(self).",
             logType: .operators,
-            debugPair: debugPair
+            loggingCombo: loggingCombo
         )
         
         return publisher.subscriber()
