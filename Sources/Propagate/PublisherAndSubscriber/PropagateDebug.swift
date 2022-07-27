@@ -26,7 +26,7 @@ public enum LoggingMethod {
     
     case external(LoggingHook)
     
-    @available(*, deprecated, message: "This logging method is intended for debug use only. It is highly recommended that you not check in code using .")
+    @available(*, deprecated, message: "This logging method is intended for debug use only. It is highly recommended that you not check in code that uses it.")
     case debugPrint
 }
 
@@ -37,9 +37,11 @@ internal func safePrint(_ message: String, logType: LogType, loggingCombo: Loggi
     guard logType.canBeShownAt(logLevel: combo.logLevel) else {
         return
     }
-    var output = "<>PROPAGATE: "
+    var output = "<>PROPAGATE: \n\t"
     if combo.message.count > 0 {
-        output += "\(combo.message) - "
+        let splitMessage = combo.message
+                            .replacingOccurrences(of: "\n", with: "\n\t")
+        output += "\(splitMessage) - "
     }
     output += message
     
