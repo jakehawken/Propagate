@@ -12,7 +12,8 @@ public extension Subscriber {
         boundStatefulPublisher()
             .subscriber()
             .onCancelled {
-                _ = self // Capturing self to keep subscriber alive for easier chaining.
+                // Capturing self to keep subscriber alive for easier chaining.
+                _ = self
             }
     }
     
@@ -21,7 +22,8 @@ public extension Subscriber {
         publisher.publish(value)
         return publisher.subscriber()
             .onCancelled {
-                _ = self // Capturing self to keep subscriber alive for easier chaining.
+                // Capturing self to keep subscriber alive for easier chaining.
+                _ = self
             }
     }
     

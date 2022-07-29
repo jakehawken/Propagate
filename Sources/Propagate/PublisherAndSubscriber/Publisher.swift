@@ -17,7 +17,7 @@ public class Publisher<T, E: Error> {
     fileprivate var subscribers = WeakBag<Subscriber<T, E>>()
     private(set) public var isCancelled = false
     
-    internal var loggingCombo: (LoggingCombo)?
+    internal var loggingCombo: LoggingCombo?
     
     public init() {
     }
@@ -35,7 +35,11 @@ public class Publisher<T, E: Error> {
     }
     
     deinit {
-        safePrint("Releasing \(self) from memory.", logType: .lifeCycle, loggingCombo: loggingCombo)
+        safePrint(
+            "Releasing \(self) from memory.",
+            logType: .lifeCycle,
+            loggingCombo: loggingCombo
+        )
         // The asynchronous cancelAll() can't be called from deinit
         // because it results in a bad access crash.
         handleCancellation()
@@ -48,17 +52,19 @@ public class Publisher<T, E: Error> {
     /// `cancelAll()`, which will remove all subscribers and emit the `.cancelled`
     /// state on each of them.
     public func subscriber() -> Subscriber<T, E> {
-        /*
-         Any changes made to this function's implementation will
-         also need to be made to the same method on StatefulPublisher.
-         */
         let newSub = Subscriber(canceller: .init { [weak self] in
             self?.removeSubscriber($0)
         })
+        /// Any changes made in this method that need to shared between
+        /// this and any subclasses should be added to the below helper method.
+        return addNewSubscriberAndLog(newSub)
+    }
+    
+    fileprivate func addNewSubscriberAndLog(_ newSub: Subscriber<T,E>) -> Subscriber<T,E> {
         lockQueue.async { [weak self] in
             self?.subscribers.insert(newSub)
         }
-        safePrint("Generating new subscriber: \(newSub) from \(self)", logType: .lifeCycle, loggingCombo: loggingCombo)
+        logPublisher(self, generatingNewSubscriber: newSub, loggingCombo: loggingCombo)
         return newSub
     }
     
@@ -122,7 +128,7 @@ extension Publisher: PropagateDebuggable {
     @discardableResult public func enableLogging(
         logLevel: DebugLogLevel = .all,
         _ additionalMessage: String = "",
-        _ logMethod: LoggingMethod = .debugPrint
+        _ logMethod: LoggingMethod
     ) -> Self {
         self.loggingCombo = (logLevel, additionalMessage, logMethod)
         return self
@@ -219,24 +225,14 @@ public class StatefulPublisher<T,E: Error>: Publisher<T, E> {
     }
     
     public override func subscriber() -> Subscriber<T, E> {
-        /*
-         Any changes made to this function's implementation will
-         also need to be made to the same method on Publisher.
-         */
         let newSub = OnSubscribeCallbackSubscriber(canceller: .init { [weak self] in
             self?.removeSubscriber($0)
         })
         newSub.lastStateCallback = { [weak self] in self?.lastState }
         
-        lockQueue.async { [weak self] in
-            self?.subscribers.insert(newSub)
-        }
-        safePrint(
-            "Generating new subscriber. -- \(self) --> \(newSub)",
-            logType: .lifeCycle,
-            loggingCombo: loggingCombo
-        )
-        return newSub
+        /// Any changes made in this method that need to shared between
+        /// this and the superclass should be added to the below helper method.
+        return addNewSubscriberAndLog(newSub)
     }
     
 }
@@ -247,4 +243,16 @@ public extension Publisher where T == Void {
         publish(())
     }
     
+}
+
+private func logPublisher<T,E:Error>(
+    _ pub: Publisher<T,E>,
+    generatingNewSubscriber sub: Subscriber<T,E>,
+    loggingCombo: LoggingCombo?
+) {
+    safePrint(
+        "Instance \(memoryAddressStringFor(pub)) generating new subscriber --> \(sub)",
+        logType: .lifeCycle,
+        loggingCombo: loggingCombo
+    )
 }

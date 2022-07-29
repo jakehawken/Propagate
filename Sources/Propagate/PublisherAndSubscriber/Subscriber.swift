@@ -59,7 +59,7 @@ extension Subscriber: PropagateDebuggable {
     @discardableResult public func enableLogging(
         logLevel: DebugLogLevel = .all,
         _ additionalMessage: String = "",
-        _ logMethod: LoggingMethod = .debugPrint
+        _ logMethod: LoggingMethod
     ) -> Self {
         self.loggingCombo = (logLevel, additionalMessage, logMethod)
         return self
