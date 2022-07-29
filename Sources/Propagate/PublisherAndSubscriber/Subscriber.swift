@@ -59,7 +59,7 @@ extension Subscriber: PropagateDebuggable {
     @discardableResult public func enableLogging(
         logLevel: DebugLogLevel = .all,
         _ additionalMessage: String = "",
-        _ logMethod: LoggingMethod = .debugPrint
+        _ logMethod: LoggingMethod
     ) -> Self {
         self.loggingCombo = (logLevel, additionalMessage, logMethod)
         return self
@@ -239,6 +239,8 @@ public extension Subscriber {
     /// Binds this subscriber to a publisher of the same type. Each StreamState received
     /// by this subscriber will be published by the publisher it has been bound to.
     @discardableResult func bindTo(_ publisher: Publisher<T,E>) -> Self {
+        
+        
         subscribe {
             publisher.publishNewState($0)
         }
