@@ -25,7 +25,7 @@ public class Publisher<T, E: Error> {
     /// Emits a new `StreamState`. If this publisher has previously been
     /// cancelled, this method will be a no-op.
     internal func publishNewState(_ state: State) {
-        safePrint("Publishing state \(state). -- \(self)", logType: .pubSub)
+        log("Publishing state \(state). -- \(self)", logType: .pubSub)
         lockQueue.async {
             if self.isCancelled {
                 return
@@ -35,7 +35,7 @@ public class Publisher<T, E: Error> {
     }
     
     deinit {
-        safePrint("Releasing \(self) from memory.", logType: .lifeCycle)
+        log("Releasing \(self) from memory.", logType: .lifeCycle)
         // The asynchronous cancelAll() can't be called from deinit
         // because it results in a bad access crash.
         handleCancellation()
@@ -60,7 +60,7 @@ public class Publisher<T, E: Error> {
         lockQueue.async { [weak self] in
             self?.subscribers.insert(newSub)
         }
-        safePrint(
+        log(
             "Instance \(memoryAddressStringFor(self)) generating new subscriber --> \(newSub)",
             logType: .lifeCycle
         )
@@ -140,7 +140,7 @@ extension Publisher: PropagateDebuggable {
 private extension Publisher {
     
     func removeSubscriber(_ subscriber: Subscriber<T,E>) {
-        safePrint("Removing \(subscriber) from \(self)", logType: .pubSub)
+        log("Removing \(subscriber) from \(self)", logType: .pubSub)
         self.subscribers.pruneIf { $0 === subscriber }
         subscriber.receive(.cancelled)
     }
@@ -151,9 +151,9 @@ private extension Publisher {
         }
         isCancelled = true
         let removedSubscribers = subscribers.removeAll()
-        safePrint("Removing subscribers: \(removedSubscribers)", logType: .pubSub)
+        log("Removing subscribers: \(removedSubscribers)", logType: .pubSub)
         removedSubscribers.forEach {
-            safePrint("Sending cancellation signal to \($0)", logType: .pubSub)
+            log("Sending cancellation signal to \($0)", logType: .pubSub)
             $0.receive(.cancelled)
         }
     }

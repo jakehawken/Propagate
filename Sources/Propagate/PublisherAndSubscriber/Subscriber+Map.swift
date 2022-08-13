@@ -23,7 +23,7 @@ public extension Subscriber {
         
         let newSubscriber = newPublisher.subscriber()
         
-        safePrint(
+        log(
             "Mapping states from StreamState<\(T.self),\(E.self)> to StreamState<\(NewT.self),\(NewE.self)>",
             logType: .operators
         )
@@ -37,7 +37,7 @@ public extension Subscriber {
     /// this subscriber to `.data` values of a different type on a new subscriber.
     /// Other states (`.error` and `.cancelled`) pass through like normal.
     func mapValues<NewT>(_ transform: @escaping (T) -> NewT) -> Subscriber<NewT, E> {
-        safePrint("Mapping values from \(T.self) to \(NewT.self)", logType: .operators)
+        log("Mapping values from \(T.self) to \(NewT.self)", logType: .operators)
         return mapStates { oldState in
             switch oldState {
             case .data(let data):
@@ -69,7 +69,7 @@ public extension Subscriber {
     /// this subscriber to `.error` errors of a different type on a new subscriber.
     /// Other states (`.data` and `.cancelled`) pass through like normal.
     func mapErrors<NewE: Error>(_ transform: @escaping (E) -> NewE) -> Subscriber<T, NewE> {
-        safePrint("Mapping errors from \(E.self) to \(NewE.self).", logType: .operators)
+        log("Mapping errors from \(E.self) to \(NewE.self).", logType: .operators)
         return mapStates { oldState in
             switch oldState {
             case .data(let data):

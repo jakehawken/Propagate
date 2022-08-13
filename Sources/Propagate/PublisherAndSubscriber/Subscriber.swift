@@ -27,7 +27,7 @@ public class Subscriber<T, E: Error> {
     }
     
     deinit {
-        safePrint("Releasing \(self) from memory.", logType: .lifeCycle)
+        log("Releasing \(self) from memory.", logType: .lifeCycle)
         cancel()
     }
     
@@ -85,7 +85,7 @@ internal extension Subscriber {
     /// its publisher. This will result in this subscriber
     /// immediately receiving a `.cancelled` signal.
     func cancel() {
-        safePrint("Cancelling \(self)...", logType: .lifeCycle)
+        log("Cancelling \(self)...", logType: .lifeCycle)
         canceller.cancel(for: self)
         receive(.cancelled)
     }
@@ -100,7 +100,7 @@ private extension Subscriber {
         guard !isCancelled else {
             return
         }
-        safePrint("Received \(state). -- \(self)", logType: .pubSub)
+        log("Received \(state). -- \(self)", logType: .pubSub)
         callbacks.forEach { (queue, action) in
             queue.async { action(state) }
         }

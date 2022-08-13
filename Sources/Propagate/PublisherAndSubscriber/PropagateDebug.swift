@@ -103,19 +103,19 @@ extension Subscriber: CustomStringConvertible {
 }
 
 internal extension Publisher {
-    func safePrint(_ message: String, logType: LogType) {
+    func log(_ message: String, logType: LogType) {
         Propagate.safePrint(message, logType: logType, loggingCombo: loggingCombo)
     }
 }
 
 internal extension Subscriber {
-    func safePrint(_ message: String, logType: LogType) {
+    func log(_ message: String, logType: LogType) {
         Propagate.safePrint(message, logType: logType, loggingCombo: loggingCombo)
     }
 }
 
 internal extension ValueOnlySubscriber {
-    func safePrint(_ message: String, logType: LogType) {
+    func log(_ message: String, logType: LogType) {
         Propagate.safePrint(message, logType: logType, loggingCombo: loggingCombo)
     }
 }

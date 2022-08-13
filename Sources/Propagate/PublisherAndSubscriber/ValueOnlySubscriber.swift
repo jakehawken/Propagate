@@ -71,7 +71,7 @@ public class ValueOnlySubscriber<T> {
         
         onNext { publisher.publish($0) }
         
-        safePrint(
+        log(
             "Inflating ValueOnlySubscriber<T\(T.self)> to \(Subscriber<T,E>.self)",
             logType: .operators
         )
@@ -81,12 +81,12 @@ public class ValueOnlySubscriber<T> {
     }
     
     deinit {
-        safePrint("Releasing \(self) from memory.", logType: .lifeCycle)
+        log("Releasing \(self) from memory.", logType: .lifeCycle)
         cancel()
     }
     
     private func executeValueCallbacks(with value: T) {
-        safePrint("Received \(value). -- \(self)", logType: .lifeCycle)
+        log("Received \(value). -- \(self)", logType: .lifeCycle)
         valueCallbacks.forEach { (queue, action) in
             queue.async { action(value) }
         }
@@ -99,7 +99,7 @@ public class ValueOnlySubscriber<T> {
     }
     
     private func cancel() {
-        safePrint("Cancelling \(self)...", logType: .lifeCycle)
+        log("Cancelling \(self)...", logType: .lifeCycle)
         lockQueue.async { [weak self] in
             self?.isCancelled = true
             self?.valueCallbacks.removeAll()
@@ -181,14 +181,14 @@ public extension ValueOnlySubscriber {
     /// closure for mapping from one type to the other.
     @discardableResult func map<NewT>(mapping: @escaping (T) -> NewT) -> ValueOnlySubscriber<NewT> {
         let newSub = ValueOnlySubscriber<NewT>(other: self, mapBlock: mapping)
-        safePrint("Mapping from \(T.self) to \(NewT.self). -- \(self)", logType: .operators)
+        log("Mapping from \(T.self) to \(NewT.self). -- \(self)", logType: .operators)
         return newSub
     }
     
     /// Generates a new ValueOnlySubscriber of a different type, based on the supplied
     /// closure for mapping from one type to the other.
     @discardableResult func compactMap<NewT>(mapping: @escaping (T) -> NewT?) -> ValueOnlySubscriber<NewT> {
-        safePrint("Compact mapping from \(T.self) to \(NewT.self). -- \(self)", logType: .operators)
+        log("Compact mapping from \(T.self) to \(NewT.self). -- \(self)", logType: .operators)
         
         let newSub = ValueOnlySubscriber<NewT>()
         onNext { value in
@@ -240,7 +240,7 @@ public extension ValueOnlySubscriber where T: Equatable {
             new.cancel()
         }
         
-        safePrint(
+        log(
             "Removing contiguous duplicates from \(self)",
             logType: .operators
         )
@@ -422,13 +422,13 @@ private func logMessageForCombining<T1, T2>(_ sub1: ValueOnlySubscriber<T1>, and
 private func logForCombiningIfPossible<T1,T2>(_ sub1: ValueOnlySubscriber<T1>, _ sub2: ValueOnlySubscriber<T2>) {
     // This logging logic will probably become a problem at some point.
     if sub1.loggingCombo != nil {
-        sub1.safePrint(
+        sub1.log(
             logMessageForCombining(sub1, and: sub2),
             logType: .operators
         )
     }
     else if sub2.loggingCombo != nil {
-        sub2.safePrint(
+        sub2.log(
             logMessageForCombining(sub1, and: sub2),
             logType: .operators
         )

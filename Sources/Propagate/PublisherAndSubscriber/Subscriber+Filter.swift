@@ -19,7 +19,7 @@ public extension Subscriber {
             publisher.publishNewState(state)
         }
         
-        safePrint("Filtering \(self)", logType: .operators)
+        log("Filtering \(self)", logType: .operators)
         
         return publisher.subscriber()
             .onCancelled {
@@ -90,7 +90,7 @@ public extension Subscriber where T: Equatable {
             }
         }
         
-        safePrint("Removing contiguous duplicates values from \(self).", logType: .operators)
+        log("Removing contiguous duplicates values from \(self).", logType: .operators)
         return publisher.subscriber()
             .onCancelled {
                 _ = self // Capturing self to keep subscriber alive for easier chaining.
@@ -126,7 +126,7 @@ public extension Subscriber where T: Equatable, E: Equatable {
             }
         }
         
-        safePrint("Removing contiguous duplicate values from \(self).", logType: .operators)
+        log("Removing contiguous duplicate values from \(self).", logType: .operators)
         
         return publisher.subscriber()
             .onCancelled {
