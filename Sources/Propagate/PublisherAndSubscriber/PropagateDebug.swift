@@ -30,7 +30,7 @@ public enum LoggingMethod {
     case debugPrint
 }
 
-internal func safePrint(_ message: String, logType: LogType, loggingCombo: LoggingCombo?) {
+private func safePrint(_ message: String, logType: LogType, loggingCombo: LoggingCombo?) {
     guard let combo = loggingCombo else {
         return
     }
@@ -47,7 +47,9 @@ internal func safePrint(_ message: String, logType: LogType, loggingCombo: Loggi
     
     switch loggingCombo?.loggingMethod {
     case .debugPrint, nil:
+#if DEBUG
         print(output)
+#endif
     case .external(let hook):
         hook(output)
     }
@@ -98,6 +100,24 @@ extension Subscriber: CustomStringConvertible {
         return "Subscriber<\(T.self),\(E.self)>(\(memoryAddressStringFor(self)))"
     }
     
+}
+
+internal extension Publisher {
+    func log(_ message: String, logType: LogType) {
+        Propagate.safePrint(message, logType: logType, loggingCombo: loggingCombo)
+    }
+}
+
+internal extension Subscriber {
+    func log(_ message: String, logType: LogType) {
+        Propagate.safePrint(message, logType: logType, loggingCombo: loggingCombo)
+    }
+}
+
+internal extension ValueOnlySubscriber {
+    func log(_ message: String, logType: LogType) {
+        Propagate.safePrint(message, logType: logType, loggingCombo: loggingCombo)
+    }
 }
 
 // MARK: - interface

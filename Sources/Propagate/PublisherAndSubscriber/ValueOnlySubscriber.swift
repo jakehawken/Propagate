@@ -37,7 +37,7 @@ public class ValueOnlySubscriber<T> {
     private var valueCallbacks = [ValueExecutionPair]()
     private var cancelCallbacks = [CancelExecutionPair]()
     private(set) public var isCancelled = false
-    private var loggingCombo: LoggingCombo?
+    internal var loggingCombo: LoggingCombo?
     
     fileprivate init() {}
     
@@ -71,10 +71,9 @@ public class ValueOnlySubscriber<T> {
         
         onNext { publisher.publish($0) }
         
-        safePrint(
+        log(
             "Inflating ValueOnlySubscriber<T\(T.self)> to \(Subscriber<T,E>.self)",
-            logType: .operators,
-            loggingCombo: loggingCombo
+            logType: .operators
         )
         return publisher.subscriber().onCancelled {
             _ = self // Capturing self to keep subscriber alive for easier chaining.
@@ -82,20 +81,12 @@ public class ValueOnlySubscriber<T> {
     }
     
     deinit {
-        safePrint(
-            "Releasing \(self) from memory.",
-            logType: .lifeCycle,
-            loggingCombo: loggingCombo
-        )
+        log("Releasing \(self) from memory.", logType: .lifeCycle)
         cancel()
     }
     
     private func executeValueCallbacks(with value: T) {
-        safePrint(
-            "Received \(value). -- \(self)",
-            logType: .lifeCycle,
-            loggingCombo: loggingCombo
-        )
+        log("Received \(value). -- \(self)", logType: .lifeCycle)
         valueCallbacks.forEach { (queue, action) in
             queue.async { action(value) }
         }
@@ -108,11 +99,7 @@ public class ValueOnlySubscriber<T> {
     }
     
     private func cancel() {
-        safePrint(
-            "Cancelling \(self)...",
-            logType: .lifeCycle,
-            loggingCombo: loggingCombo
-        )
+        log("Cancelling \(self)...", logType: .lifeCycle)
         lockQueue.async { [weak self] in
             self?.isCancelled = true
             self?.valueCallbacks.removeAll()
@@ -194,22 +181,14 @@ public extension ValueOnlySubscriber {
     /// closure for mapping from one type to the other.
     @discardableResult func map<NewT>(mapping: @escaping (T) -> NewT) -> ValueOnlySubscriber<NewT> {
         let newSub = ValueOnlySubscriber<NewT>(other: self, mapBlock: mapping)
-        safePrint(
-            "Mapping from \(T.self) to \(NewT.self). -- \(self)",
-            logType: .operators,
-            loggingCombo: loggingCombo
-        )
+        log("Mapping from \(T.self) to \(NewT.self). -- \(self)", logType: .operators)
         return newSub
     }
     
     /// Generates a new ValueOnlySubscriber of a different type, based on the supplied
     /// closure for mapping from one type to the other.
     @discardableResult func compactMap<NewT>(mapping: @escaping (T) -> NewT?) -> ValueOnlySubscriber<NewT> {
-        safePrint(
-            "Compact mapping from \(T.self) to \(NewT.self). -- \(self)",
-            logType: .operators,
-            loggingCombo: loggingCombo
-        )
+        log("Compact mapping from \(T.self) to \(NewT.self). -- \(self)", logType: .operators)
         
         let newSub = ValueOnlySubscriber<NewT>()
         onNext { value in
@@ -261,10 +240,9 @@ public extension ValueOnlySubscriber where T: Equatable {
             new.cancel()
         }
         
-        safePrint(
+        log(
             "Removing contiguous duplicates from \(self)",
-            logType: .operators,
-            loggingCombo: loggingCombo
+            logType: .operators
         )
         return new.onCancelled {
             _ = self
@@ -296,11 +274,7 @@ public extension ValueOnlySubscriber {
             }
         }
         
-        safePrint(
-            "Combining ValueOnlySubscribers <\(T.self)> and <\(T2.self)>: -- \(memoryAddressStringFor(sub1)) & \(memoryAddressStringFor(sub2))",
-            logType: .operators,
-            loggingCombo: sub1.loggingCombo ?? sub2.loggingCombo // This will probably be a problem at some point.
-        )
+        logForCombiningIfPossible(sub1, sub2)
         
         return new.onCancelled {
             _ = sub1
@@ -437,4 +411,26 @@ public extension ValueOnlySubscriber {
         return ValueOnlySubscriber.combine(self, sub2, sub3, sub4, sub5, sub6)
     }
     
+}
+
+// MARK: - Private / Helpers
+
+private func logMessageForCombining<T1, T2>(_ sub1: ValueOnlySubscriber<T1>, and sub2: ValueOnlySubscriber<T2>) -> String {
+    "Combining ValueOnlySubscribers <\(T1.self)> and <\(T2.self)>: -- \(memoryAddressStringFor(sub1)) & \(memoryAddressStringFor(sub2))"
+}
+
+private func logForCombiningIfPossible<T1,T2>(_ sub1: ValueOnlySubscriber<T1>, _ sub2: ValueOnlySubscriber<T2>) {
+    // This logging logic will probably become a problem at some point.
+    if sub1.loggingCombo != nil {
+        sub1.log(
+            logMessageForCombining(sub1, and: sub2),
+            logType: .operators
+        )
+    }
+    else if sub2.loggingCombo != nil {
+        sub2.log(
+            logMessageForCombining(sub1, and: sub2),
+            logType: .operators
+        )
+    }
 }
