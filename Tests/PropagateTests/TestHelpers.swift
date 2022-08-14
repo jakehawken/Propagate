@@ -26,23 +26,64 @@ extension Date {
     }
 }
 
-enum TestError: Error {
+enum TestError: Error, Equatable {
     case case1
+    case case2
+}
+
+enum OtherTestError: Error, Equatable {
+    case case1
+    case case2
 }
 
 extension XCTestCase {
     
-    @discardableResult func waitForNextState<T,E:Error>(timeout: TimeInterval = 0.01, subscriberBlock: () -> Subscriber<T,E>) -> Subscriber<T,E> {
-        let subscriber = subscriberBlock()
-        
+    func waitForNextState<T,E:Error>(
+        forSubscriber subscriber: Subscriber<T,E>,
+        timeout: TimeInterval = 0.01
+    ) {
+        var fulfilled = false
         let expectation = expectation(description: "\(subscriber) should emit within \(timeout) second\(timeout != 1 ? "s" : "").")
         subscriber.subscribe { _ in
+            guard fulfilled == false else {
+                return
+            }
             expectation.fulfill()
+            fulfilled = true
         }
         
         waitForExpectations(timeout: timeout)
+    }
+    
+    func confirmNextStateDoesntTrigger<T,E:Error>(
+        forSubscriber sub: Subscriber<T,E>,
+        timeout: TimeInterval = 0.01
+    ) {
+        let start = Date()
+        let errorMessage = "Subscriber should not emit within \(timeout) seconds."
+        let expectation = expectation(description: errorMessage)
+        let timer = Timer.scheduledTimer(withTimeInterval: timeout - 0.00001, repeats: false) { timer in
+            expectation.fulfill()
+            timer.invalidate()
+        }
         
-        return subscriber
+        sub.subscribe { _ in
+            if timer.isValid {
+                XCTFail(
+                    "\(errorMessage) Emitted after \(Date().timeIntervalSince(start)) seconds."
+                )
+            }
+        }
+        
+        waitForExpectations(timeout: timeout)
+    }
+    
+    func waitForCompletion<T,E:Error>(of future: Future<T,E>, timeout: TimeInterval = 0.01) {
+        let expectation = expectation(description: "\(future) should complete within \(timeout) second\(timeout != 1 ? "s" : "").")
+        future.finally { _ in
+            expectation.fulfill()
+        }
+        waitForExpectations(timeout: timeout)
     }
     
 }

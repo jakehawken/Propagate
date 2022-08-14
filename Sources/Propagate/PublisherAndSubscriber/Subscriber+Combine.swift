@@ -18,11 +18,24 @@ public extension Subscriber {
                 publisher.publish(tuple)
             }
         }
+        .onError {
+            publisher.publish($0)
+        }
+        .onCancelled {
+            publisher.cancelAll()
+        }
+        
         sub2.onNewData {
             tupleCreator.item2 = $0
             if let tuple = tupleCreator.tuple {
                 publisher.publish(tuple)
             }
+        }
+        .onError {
+            publisher.publish($0)
+        }
+        .onCancelled {
+            publisher.cancelAll()
         }
         
         return publisher.subscriber()
