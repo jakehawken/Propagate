@@ -31,4 +31,13 @@ public extension StreamState {
         }
     }
     
+    var error: E? {
+        switch self {
+        case .error(let error):
+            return error
+        default:
+            return nil
+        }
+    }
+    
 }

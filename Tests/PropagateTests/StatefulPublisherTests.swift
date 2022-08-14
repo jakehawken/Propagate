@@ -28,9 +28,9 @@ class StatefulPublishertests: XCTestCase {
         
         sourcePublisher.publish(5)
         
-        waitForNextState {
-            subject.onNewData { receivedValue = $0 }
-        }
+        waitForNextState(
+            forSubscriber: subject.onNewData { receivedValue = $0 }
+        )
         
         XCTAssertNotNil(receivedValue)
         XCTAssertEqual(receivedValue, 5)

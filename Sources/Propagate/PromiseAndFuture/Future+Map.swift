@@ -175,8 +175,8 @@ public extension Future {
     @discardableResult func flatMap<NewT, NewE: Error>(_ mapBlock: @escaping (Result<T,E>) -> Future<NewT,NewE>) -> Future<NewT,NewE> {
         let promise = Promise<NewT,NewE>()
         
-        finally {
-            mapBlock($0)
+        finally { result in
+            mapBlock(result)
                 .onSuccess { promise.resolve($0) }
                 .onFailure { promise.reject($0) }
         }
@@ -187,23 +187,35 @@ public extension Future {
     /**
     Operator. Maps the success value of this future to the kicking off of another future. Errors are passed through unchanged.
     
-    - Parameter mapBlock: Closure which generates the new future. Takes in the `Result<T,E>` from the completion of the first future.
+    - Parameter mapBlock: Closure which generates the new future. Takes in the success value of the first future.
     - returns: The new future, as a `@discardableResult` to allow for the chaining of mutation/callback methods.
     */
     @discardableResult func flatMapSuccess<NewT>(_ mapBlock: @escaping (T) -> Future<NewT,E>) -> Future<NewT,E> {
-        let promise = Promise<NewT,E>()
-        
-        onSuccess {
-            mapBlock($0)
-                .onSuccess { promise.resolve($0) }
-                .onFailure { promise.reject($0) }
+        flatMap { result in
+            switch result {
+            case .success(let value):
+                return mapBlock(value)
+            case .failure(let error):
+                return .error(error)
+            }
         }
-        
-        onFailure { error in
-            promise.reject(error)
+    }
+    
+    /**
+    Operator. Chains this future such that if it fails, it kicks off another future. If it succeeds, the success value is handed back immediately.
+    
+    - Parameter mapBlock: Closure which generates the new future. Takes in the error value of the first future.
+    - returns: The new future, as a `@discardableResult` to allow for the chaining of mutation/callback methods.
+    */
+    @discardableResult func flatMapError<NewE: Error>(_ mapBlock: @escaping (E) -> Future<T,NewE>) -> Future<T,NewE> {
+        flatMap { result in
+            switch result {
+            case .success(let value):
+                return .of(value)
+            case .failure(let error):
+                return mapBlock(error)
+            }
         }
-        
-        return promise.future
     }
     
 }
