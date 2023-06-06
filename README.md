@@ -209,10 +209,10 @@ let emailSub = emailInputSub
     .filter { isValidEmail($0) }        // Call into a helper function to check if email address is valid
     
 let passwordSub = Subscriber.merge(passwordInput1, passwordInput2)
-    .filter { $0.0 == $0.1 }                                        // when the two passwords match
-    .map { $0.0 }                                                   // pass along one of them
-    .filterNil()                                                    // only take a non-nil value
-    .filter {                                                       // make sure the password matches your rules
+    .filter { $0.0 == $0.1 }  // when the two passwords match
+    .map { $0.0 }             // pass along one of them
+    .filterNil()              // only take a non-nil value
+    .filter {                 // make sure the password matches your rules
         $0.count > 7 &&
         $0.rangeOfCharacter(from: .decimalDigits) != nil &&
         $0.rangeOfCharacter(from: .capitalizedLetters) != nil &&
